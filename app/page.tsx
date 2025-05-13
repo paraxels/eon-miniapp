@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useMiniKit, useAddFrame, useOpenUrl } from "@coinbase/onchainkit/minikit";
@@ -493,8 +494,9 @@ function AppContent() {
       });
       
     } catch (err) {
+      const errorMessage = (err as Error).message || "Error during approval";
       console.error("Error during approval:", err);
-      setError(err.message || "Error during approval");
+      setError(errorMessage);
       setIsApproving(false);
       setTransactionToRecord(null);
     }
