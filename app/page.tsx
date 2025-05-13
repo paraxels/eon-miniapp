@@ -111,6 +111,9 @@ function AppContent() {
   const [totalDonations, setTotalDonations] = useState<{totalDonated: number, transactionCount: number} | null>(null);
   const [isLoadingTotalDonations, setIsLoadingTotalDonations] = useState(false);
   
+  // State for transaction record count
+  const [transactionRecordCount, setTransactionRecordCount] = useState<number | null>(null);
+  
   // Create transaction hooks
   const { data: hash, error: sendError, isPending: isSending, sendTransaction } = useSendTransaction();
   
@@ -179,30 +182,35 @@ function AppContent() {
     }
   }, [hash]);
   
-  // Effect to fetch total donations on page load
-  useEffect(() => {
-    const fetchTotalDonations = async () => {
-      try {
-        setIsLoadingTotalDonations(true);
-        const response = await fetch('/api/total-donations');
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          console.log(`Total donations across all users: ${data.totalDonated} base units ($${(data.totalDonated/1000000).toFixed(2)} USDC)`);
-          setTotalDonations(data);
-        } else {
-          console.error('Error fetching total donations:', data.error);
-        }
-      } catch (error) {
-        console.error('Failed to fetch total donations:', error);
-      } finally {
-        setIsLoadingTotalDonations(false);
+  // Function to fetch total donations
+  const fetchTotalDonations = async () => {
+    try {
+      setIsLoadingTotalDonations(true);
+      const response = await fetch('/api/total-donations');
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log(`Total donations across all users: ${data.totalDonated} base units ($${(data.totalDonated/1000000).toFixed(2)} USDC)`);
+        setTotalDonations(data);
+        setTransactionRecordCount(data.transactionCount); // Set transactionCount from total-donations
+      } else {
+        console.error('Error fetching total donations:', data.error);
       }
-    };
-    
-    fetchTotalDonations();
+    } catch (error) {
+      console.error('Failed to fetch total donations:', error);
+    } finally {
+      setIsLoadingTotalDonations(false);
+    }
+  };
+
+  // Effect to fetch total donations every 5 seconds
+  useEffect(() => {
+    fetchTotalDonations(); // Initial fetch
+    const interval = setInterval(fetchTotalDonations, 5000); // Refetch every 5 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
   }, []);
-  
+
   // Effect to fetch existing active records when wallet connects
   useEffect(() => {
     if (isConnected && address) {
@@ -502,6 +510,26 @@ function AppContent() {
     }
   };
 
+  const fetchTransactionRecordCount = async () => {
+    try {
+      const response = await fetch('/api/transaction-records/count');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log(`Total transaction records: ${data.count}`);
+        setTransactionRecordCount(data.count);
+      } else {
+        console.error('Error fetching transaction record count:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to fetch transaction record count:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactionRecordCount();
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)]" style={{
       ...themeStyles,
@@ -522,21 +550,22 @@ function AppContent() {
           <h1 className="text-6xl mb-3 mt-2 text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
           
           {/* Total donations counter */}
-          <div className="text-xl font-medium text-[var(--app-accent)] mb-4">
-            {isLoadingTotalDonations ? (
-              <span className="text-md text-gray-500 inline-flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Loading donation data...
-              </span>
-            ) : totalDonations ? (
+          <div className="text-lg font-medium text-[var(--app-accent)] mb-0">
+            {totalDonations ? (
               <span>
-                ${(totalDonations.totalDonated / 1000000).toFixed(2)} total donations
+                ${(totalDonations.totalDonated / 1000000).toFixed(2)} donated
               </span>
             ) : (
-              <span>$0.00 total donations</span>
+              <span>$0.00 donated</span>
+            )}
+          </div>
+          
+          {/* Transaction record count */}
+          <div className="text-sm font-medium text-[var(--app-accent)] mb-4">
+            {transactionRecordCount ? (
+              <span>{transactionRecordCount} donations</span>
+            ) : (
+              <span>No donations</span>
             )}
           </div>
           
