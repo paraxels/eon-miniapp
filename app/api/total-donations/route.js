@@ -1,5 +1,6 @@
 // app/api/total-donations/route.js
 export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
