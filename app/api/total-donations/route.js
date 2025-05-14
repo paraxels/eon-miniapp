@@ -49,15 +49,18 @@ export async function GET() {
       console.log('No donation transactions found.');
     }
     
-    const response = NextResponse.json({
-      success: true,
-      totalDonated,
-      transactionCount: transactions.length
-    });
-
-    // Disable caching
-    response.headers.set('Cache-Control', 'no-store');
-    return response;
+    return NextResponse.json(
+      {
+        success: true,
+        totalDonated,
+        transactionCount: transactions.length,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error calculating total donations:', error);
     // Return a graceful fallback for production instead of an error
