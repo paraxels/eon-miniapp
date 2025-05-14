@@ -44,6 +44,7 @@ export async function GET() {
       }, 0);
       
       console.log(`Total donations across all users: ${totalDonated} base units (${totalDonated/1000000} USDC dollars)`);
+      console.log(`Total transaction count: ${transactions.length}`)
     } else {
       console.log('No donation transactions found.');
     }
