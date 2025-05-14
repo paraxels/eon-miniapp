@@ -49,12 +49,15 @@ export async function GET() {
       console.log('No donation transactions found.');
     }
     
-    // Format response
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
-      totalDonated: totalDonated, // This is in USDC base units (e.g., 1000000 = $1.00)
+      totalDonated,
       transactionCount: transactions.length
     });
+
+    // Disable caching
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
   } catch (error) {
     console.error('Error calculating total donations:', error);
     // Return a graceful fallback for production instead of an error
