@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useMiniKit, useAddFrame, useOpenUrl } from "@coinbase/onchainkit/minikit";
+import { useMiniKit, useAddFrame } from "@coinbase/onchainkit/minikit";
+import { useOpenUrl } from "@coinbase/onchainkit/minikit";
+import { sdk } from "@farcaster/frame-sdk";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Button } from "./components/DemoComponents";
 import { Icon } from "./components/DemoComponents";
+import { SeasonRecapCard } from "./components/SeasonRecapCard";
 import { WagmiProviderComponent } from "./components/WagmiProvider";
 import { WalletConnect } from "./components/WalletConnect";
 import { useAccount, useConnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
@@ -59,6 +62,7 @@ const SPENDER_ADDRESS = isTestnet ? SPENDER_ADDRESSES.testnet : SPENDER_ADDRESSE
 // App Content component
 function AppContent() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
+const openUrl = useOpenUrl();
   const [frameAdded, setFrameAdded] = useState(false);
   const [amount, setAmount] = useState(5);
   const [percentage, setPercentage] = useState(10);
@@ -82,6 +86,7 @@ function AppContent() {
     percentAmount: number;
     authorized: string;
     active: boolean;
+    completed?: boolean;
     target: string;
     timestamp: string;
     network: string;
@@ -102,6 +107,9 @@ function AppContent() {
   // State for existing records
   const [existingRecord, setExistingRecord] = useState<DatabaseRecord | null>(null);
   const [isLoadingRecord, setIsLoadingRecord] = useState(false);
+  
+  // State for most recent completed record
+  const [completedRecord, setCompletedRecord] = useState<DatabaseRecord | null>(null);
   
   // State for donation progress
   const [donationProgress, setDonationProgress] = useState<DonationProgress | null>(null);
@@ -160,7 +168,6 @@ function AppContent() {
   } as React.CSSProperties;
 
   const addFrame = useAddFrame();
-  const openUrl = useOpenUrl();
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -224,21 +231,38 @@ function AppContent() {
             if (data.hasActiveRecord) {
               console.log('Found existing active record:', data.record);
               setExistingRecord(data.record);
-              
+              setCompletedRecord(null);
               // Pre-populate the UI with values from the record
               if (data.record.dollarAmount) {
                 setAmount(data.record.dollarAmount);
               }
-              
               if (data.record.percentAmount) {
                 setPercentage(data.record.percentAmount);
               }
-              
               // Now fetch donation progress for this address
               fetchDonationProgress(address);
             } else {
-              console.log('No active records found for this wallet');
+              // No active record, try to fetch most recent completed record
               setExistingRecord(null);
+              try {
+                const completedResp = await fetch(`/api/wallet-records?address=${address}&completed=true`);
+                const completedData = await completedResp.json();
+                if (
+                  completedResp.ok &&
+                  completedData.hasCompletedRecord &&
+                  completedData.record &&
+                  completedData.record.completed === true &&
+                  completedData.record.active === false
+                ) {
+                  console.log('Found completed record:', completedData.record);
+                  setCompletedRecord(completedData.record);
+                } else {
+                  console.log('No completed record or does not match criteria:', completedData);
+                  setCompletedRecord(null);
+                }
+              } catch (err) {
+                setCompletedRecord(null);
+              }
             }
           } else {
             console.error('Error fetching wallet records:', data.error);
@@ -530,6 +554,75 @@ function AppContent() {
     fetchTransactionRecordCount();
   }, []);
 
+  const [showRecap, setShowRecap] = useState(true);
+
+  // Share handler for Farcaster cast
+  const handleShare = async () => {
+    if (!completedRecord) return;
+    const seasonTotal = completedRecord.dollarAmount;
+    const totalRaised = totalDonations ? (totalDonations.totalDonated / 1000000).toFixed(2) : '0.00';
+    const castText = `The amazing people on fracaster have raised $${totalRaised} for charity by passively donating a percent of what they earn on this app through EON. No amount is too small to make a difference, will you join in?`;
+
+    try {
+      // Use sdk.actions.composeCast as per documentation
+      await sdk.actions.composeCast({ 
+        text: castText,
+        embeds: ["https://eon-miniapp.vercel.app/"] 
+      });
+    } catch (err) {
+      console.error('Failed to compose cast:', err);
+    }
+  }
+
+  // Hide recap and show new season card when triggered
+  if (completedRecord && completedRecord.active === false && completedRecord.completed === true && showRecap) {
+    return (
+      <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)]" style={{ ...themeStyles, backgroundColor: "#F7F6E7", background: "#F7F6E7" }}>
+        <div className="w-full max-w-md mx-auto px-4 py-3" style={{ backgroundColor: "#F7F6E7" }}>
+          <header className="flex justify-between items-center mb-3 h-11">
+            <div>
+              <div className="flex items-center space-x-2">
+                <WalletConnect />
+              </div>
+            </div>
+            <div>{saveFrameButton}</div>
+          </header>
+
+          <div className="text-center my-8">
+            <h1 className="text-6xl mb-3 mt-2 text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
+            <div className="text-lg font-medium text-[var(--app-accent)] mb-0">
+              {totalDonations ? (
+                <span>
+                  ${(totalDonations.totalDonated / 1000000).toFixed(2)} donated
+                </span>
+              ) : (
+                <span>$0.00 donated</span>
+              )}
+            </div>
+            <div className="text-sm font-medium text-[var(--app-accent)] mb-4">
+              {transactionRecordCount ? (
+                <span>{transactionRecordCount} donations</span>
+              ) : (
+                <span>No donations</span>
+              )}
+            </div>
+            <p className="text-lg mt-2 text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
+          </div>
+
+          {/* Only show the recap card in place of the main card */}
+          <div className="w-full rounded-lg overflow-hidden border border-[var(--app-border)] bg-[var(--app-card-background)] shadow-sm">
+            <SeasonRecapCard
+  record={completedRecord}
+  totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
+  onNewSeason={() => setShowRecap(false)}
+  onShare={handleShare}
+/>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)]" style={{
       ...themeStyles,
@@ -758,7 +851,20 @@ function AppContent() {
                 {error}
               </div>
             )}
-            
+
+            {/* Show season recap card if most recent season is inactive and completed */}
+            {(!existingRecord && completedRecord && completedRecord.active === false && completedRecord.completed === true) && (
+              <>
+                {console.log('Rendering SeasonRecapCard with:', completedRecord)}
+                <SeasonRecapCard
+  record={completedRecord}
+  totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
+  onNewSeason={() => setShowRecap(false)}
+  onShare={handleShare}
+/>
+              </>
+            )}
+
             {txHash && showTxMessage && (
               <div className="mt-4 text-sm text-center transition-opacity duration-500 ease-in-out" 
                    style={{ opacity: showTxMessage ? 1 : 0 }}
