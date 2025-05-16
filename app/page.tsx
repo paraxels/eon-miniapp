@@ -246,7 +246,7 @@ const openUrl = useOpenUrl();
               seasonGoal > 0 // Only if goal is set
             ) {
               // Mark as completed for UI (trigger recap)
-              setCompletedRecord({ ...existingRecord });
+              setCompletedRecord({ ...existingRecord, active: false, completed: true });
               setRecapTriggeredForSeasonId(existingRecord._id);
             }
           } else {
