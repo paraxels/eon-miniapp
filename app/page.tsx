@@ -778,7 +778,7 @@ const openUrl = useOpenUrl();
                         </span>
                       ) : (
                         donationProgress ? 
-                          `$${(donationProgress.totalDonated / 1000000).toFixed(2)} of $${existingRecord.dollarAmount}` :
+                          `$${Math.min(existingRecord.dollarAmount, (donationProgress.totalDonated / 1000000)).toFixed(2)} of $${existingRecord.dollarAmount}` :
                           '$0 of $' + existingRecord.dollarAmount
                       )}
                     </div>
