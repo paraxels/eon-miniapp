@@ -929,17 +929,27 @@ const openUrl = useOpenUrl();
             )}
 
             {/* Show season recap card if most recent season is inactive and completed */}
-            {(completedRecord && recapTriggeredForSeasonId === completedRecord._id) && (
-              <>
-                {console.log('Rendering SeasonRecapCard with:', completedRecord)}
-                <SeasonRecapCard
-  record={completedRecord}
-  totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
-  onNewSeason={() => setShowRecap(false)}
-  onShare={handleShare}
-/>
-              </>
-            )}
+            {/* Only show recap card if recap is triggered; hide all other UI */}
+            {(() => {
+              const showRecap = completedRecord && recapTriggeredForSeasonId === completedRecord._id;
+              if (showRecap) {
+                return (
+                  <>
+                    {console.log('Rendering SeasonRecapCard with:', completedRecord)}
+                    <SeasonRecapCard
+                      record={completedRecord}
+                      totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
+                      onNewSeason={() => setShowRecap(false)}
+                      onShare={handleShare}
+                    />
+                  </>
+                );
+              }
+              // If not showing recap, render the rest of the app UI (existingRecord, donation progress, etc.)
+              return (
+                <>{/* PLACEHOLDER: The rest of your main UI goes here. Replace this with the actual UI code above this block. */}</>
+              );
+            })()}
 
             {txHash && showTxMessage && (
               <div className="mt-4 text-sm text-center transition-opacity duration-500 ease-in-out" 
