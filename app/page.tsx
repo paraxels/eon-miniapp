@@ -211,6 +211,9 @@ const openUrl = useOpenUrl();
     }
   };
 
+  // Track which season we've already triggered a recap for
+  const [recapTriggeredForSeasonId, setRecapTriggeredForSeasonId] = useState<string | null>(null);
+
   // Effect to fetch total donations and wallet donation progress every 5 seconds
   useEffect(() => {
     let isMounted = true;
@@ -224,12 +227,27 @@ const openUrl = useOpenUrl();
           const data = await response.json();
           if (response.ok && data.success) {
             // Only update if new donations (by totalDonated or transaction count)
-            if (
+            const newDonations =
               (!donationProgress) ||
               (data.totalDonated !== donationProgress.totalDonated) ||
-              (data.transactionCount !== donationProgress.transactionCount)
-            ) {
+              (data.transactionCount !== donationProgress.transactionCount);
+            if (newDonations) {
               setDonationProgress(data);
+            }
+            // --- SEASON COMPLETION CHECK ---
+            // Only if not already completed and recap not triggered for this season
+            const seasonGoal = existingRecord.dollarAmount || 0;
+            const donatedDollars = data.totalDonated / 1_000_000; // Assuming USDC base units
+            if (
+              existingRecord.active &&
+              existingRecord._id &&
+              recapTriggeredForSeasonId !== existingRecord._id &&
+              donatedDollars >= seasonGoal &&
+              seasonGoal > 0 // Only if goal is set
+            ) {
+              // Mark as completed for UI (trigger recap)
+              setCompletedRecord({ ...existingRecord });
+              setRecapTriggeredForSeasonId(existingRecord._id);
             }
           } else {
             console.error('Error fetching donation progress:', data.error);
@@ -245,7 +263,7 @@ const openUrl = useOpenUrl();
       isMounted = false;
       clearInterval(interval);
     };
-  }, [address, existingRecord]);
+  }, [address, existingRecord, donationProgress, recapTriggeredForSeasonId]);
 
   // Effect to fetch existing active records when wallet connects
   useEffect(() => {
