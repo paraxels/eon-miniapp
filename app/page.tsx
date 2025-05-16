@@ -221,7 +221,7 @@ const openUrl = useOpenUrl();
     const poll = async () => {
       await fetchTotalDonations();
       // Only check for user donations if wallet is connected and active record exists
-      if (address && existingRecord && existingRecord.active && existingRecord.timestamp) {
+      if (address && existingRecord && existingRecord.timestamp) {
         try {
           const response = await fetch(`/api/donation-progress?address=${address}`);
           const data = await response.json();
@@ -235,17 +235,28 @@ const openUrl = useOpenUrl();
               setDonationProgress(data);
             }
             // --- SEASON COMPLETION CHECK ---
-            // Only if not already completed and recap not triggered for this season
+            // Locally sum only donations for the current season
             const seasonGoal = existingRecord.dollarAmount || 0;
-            const donatedDollars = data.totalDonated / 1_000_000; // Assuming USDC base units
+            const seasonStart = new Date(existingRecord.timestamp).getTime();
+            // Filter donations by timestamp >= seasonStart
+            const filteredTxs = (data.transactions || []).filter((tx: any) => {
+              const txTime = new Date(tx.timestamp).getTime();
+              return txTime >= seasonStart;
+            });
+            // Sum up to the goal only
+            let runningTotal = 0;
+            for (const tx of filteredTxs) {
+              if (runningTotal >= seasonGoal * 1_000_000) break;
+              const amt = Number(tx.amount);
+              runningTotal += amt;
+            }
+            const donatedDollars = runningTotal / 1_000_000;
             if (
-              existingRecord.active &&
-              existingRecord._id &&
               recapTriggeredForSeasonId !== existingRecord._id &&
               donatedDollars >= seasonGoal &&
-              seasonGoal > 0 // Only if goal is set
+              seasonGoal > 0
             ) {
-              // Mark as completed for UI (trigger recap)
+              // Locally trigger recap regardless of backend state
               setCompletedRecord({ ...existingRecord, active: false, completed: true });
               setRecapTriggeredForSeasonId(existingRecord._id);
             }
