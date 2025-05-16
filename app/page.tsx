@@ -214,6 +214,45 @@ const openUrl = useOpenUrl();
   // Track which season we've already triggered a recap for
   const [recapTriggeredForSeasonId, setRecapTriggeredForSeasonId] = useState<string | null>(null);
 
+  // Bulletproof recap trigger: checks all available data
+  const checkAndTriggerRecap = useCallback(() => {
+    // Use completedRecord if available and not already triggered
+    if (
+      completedRecord &&
+      completedRecord._id &&
+      recapTriggeredForSeasonId !== completedRecord._id &&
+      (completedRecord.completed === true || completedRecord.active === false)
+    ) {
+      setRecapTriggeredForSeasonId(completedRecord._id);
+      setCompletedRecord({ ...completedRecord, active: false, completed: true });
+      return;
+    }
+    // Use donationProgress + existingRecord if available
+    if (existingRecord && donationProgress && existingRecord._id) {
+      const seasonGoal = existingRecord.dollarAmount || 0;
+      const seasonStart = new Date(existingRecord.timestamp).getTime();
+      const filteredTxs = (donationProgress.transactions || []).filter((tx: any) => {
+        const txTime = new Date(tx.timestamp).getTime();
+        return txTime >= seasonStart;
+      });
+      let runningTotal = 0;
+      for (const tx of filteredTxs) {
+        if (runningTotal >= seasonGoal * 1_000_000) break;
+        const amt = Number(tx.amount);
+        runningTotal += amt;
+      }
+      const donatedDollars = runningTotal / 1_000_000;
+      if (
+        recapTriggeredForSeasonId !== existingRecord._id &&
+        donatedDollars >= seasonGoal &&
+        seasonGoal > 0
+      ) {
+        setCompletedRecord({ ...existingRecord, active: false, completed: true });
+        setRecapTriggeredForSeasonId(existingRecord._id);
+      }
+    }
+  }, [completedRecord, existingRecord, donationProgress, recapTriggeredForSeasonId]);
+
   // Effect to fetch total donations and wallet donation progress every 5 seconds
   useEffect(() => {
     let isMounted = true;
@@ -234,32 +273,9 @@ const openUrl = useOpenUrl();
             if (newDonations) {
               setDonationProgress(data);
             }
-            // --- SEASON COMPLETION CHECK ---
-            // Locally sum only donations for the current season
-            const seasonGoal = existingRecord.dollarAmount || 0;
-            const seasonStart = new Date(existingRecord.timestamp).getTime();
-            // Filter donations by timestamp >= seasonStart
-            const filteredTxs = (data.transactions || []).filter((tx: any) => {
-              const txTime = new Date(tx.timestamp).getTime();
-              return txTime >= seasonStart;
-            });
-            // Sum up to the goal only
-            let runningTotal = 0;
-            for (const tx of filteredTxs) {
-              if (runningTotal >= seasonGoal * 1_000_000) break;
-              const amt = Number(tx.amount);
-              runningTotal += amt;
-            }
-            const donatedDollars = runningTotal / 1_000_000;
-            if (
-              recapTriggeredForSeasonId !== existingRecord._id &&
-              donatedDollars >= seasonGoal &&
-              seasonGoal > 0
-            ) {
-              // Locally trigger recap regardless of backend state
-              setCompletedRecord({ ...existingRecord, active: false, completed: true });
-              setRecapTriggeredForSeasonId(existingRecord._id);
-            }
+            // Always check for recap after donation progress update
+            setTimeout(checkAndTriggerRecap, 0); // Defer to next tick to ensure state is updated
+
           } else {
             console.error('Error fetching donation progress:', data.error);
           }
@@ -290,6 +306,7 @@ const openUrl = useOpenUrl();
               console.log('Found existing active record:', data.record);
               setExistingRecord(data.record);
               setCompletedRecord(null);
+              setTimeout(checkAndTriggerRecap, 0);
               // Pre-populate the UI with values from the record
               if (data.record.dollarAmount) {
                 setAmount(data.record.dollarAmount);
@@ -314,6 +331,7 @@ const openUrl = useOpenUrl();
                 ) {
                   console.log('Found completed record:', completedData.record);
                   setCompletedRecord(completedData.record);
+                  setTimeout(checkAndTriggerRecap, 0);
                 } else {
                   console.log('No completed record or does not match criteria:', completedData);
                   setCompletedRecord(null);
@@ -911,7 +929,7 @@ const openUrl = useOpenUrl();
             )}
 
             {/* Show season recap card if most recent season is inactive and completed */}
-            {(!existingRecord && completedRecord && completedRecord.active === false && completedRecord.completed === true) && (
+            {(completedRecord && recapTriggeredForSeasonId === completedRecord._id) && (
               <>
                 {console.log('Rendering SeasonRecapCard with:', completedRecord)}
                 <SeasonRecapCard
