@@ -211,20 +211,19 @@ const openUrl = useOpenUrl();
     }
   };
 
-  // Track which season we've already triggered a recap for
-  const [recapTriggeredForSeasonId, setRecapTriggeredForSeasonId] = useState<string | null>(null);
+  // Simple toggle for recap vs. active season card
+   // Only declare once
 
   // Bulletproof recap trigger: checks all available data
   const checkAndTriggerRecap = useCallback(() => {
-    // Use completedRecord if available and not already triggered
+    // Use completedRecord if available
     if (
       completedRecord &&
       completedRecord._id &&
-      recapTriggeredForSeasonId !== completedRecord._id &&
       (completedRecord.completed === true || completedRecord.active === false)
     ) {
-      setRecapTriggeredForSeasonId(completedRecord._id);
       setCompletedRecord({ ...completedRecord, active: false, completed: true });
+      
       return;
     }
     // Use donationProgress + existingRecord if available
@@ -243,15 +242,14 @@ const openUrl = useOpenUrl();
       }
       const donatedDollars = runningTotal / 1_000_000;
       if (
-        recapTriggeredForSeasonId !== existingRecord._id &&
         donatedDollars >= seasonGoal &&
         seasonGoal > 0
       ) {
         setCompletedRecord({ ...existingRecord, active: false, completed: true });
-        setRecapTriggeredForSeasonId(existingRecord._id);
+        
       }
     }
-  }, [completedRecord, existingRecord, donationProgress, recapTriggeredForSeasonId]);
+  }, [completedRecord, existingRecord, donationProgress]);
 
   // Effect to fetch total donations and wallet donation progress every 5 seconds
   useEffect(() => {
@@ -290,7 +288,7 @@ const openUrl = useOpenUrl();
       isMounted = false;
       clearInterval(interval);
     };
-  }, [address, existingRecord, donationProgress, recapTriggeredForSeasonId]);
+  }, [address, existingRecord, donationProgress, ]);
 
   // Effect to fetch existing active records when wallet connects
   useEffect(() => {
@@ -688,11 +686,11 @@ const openUrl = useOpenUrl();
           {/* Only show the recap card in place of the main card */}
           <div className="w-full rounded-lg overflow-hidden border border-[var(--app-border)] bg-[var(--app-card-background)] shadow-sm">
             <SeasonRecapCard
-  record={completedRecord}
-  totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
-  onNewSeason={() => setShowRecap(false)}
-  onShare={handleShare}
-/>
+              record={completedRecord}
+              totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
+              onNewSeason={() => setCompletedRecord(null)}
+              onShare={handleShare}
+            />
           </div>
         </div>
       </div>
@@ -929,22 +927,22 @@ const openUrl = useOpenUrl();
             )}
 
             {/* Show season recap card if most recent season is inactive and completed */}
-            {(completedRecord && recapTriggeredForSeasonId === completedRecord._id) ? (
-              <>
-                {console.log('Rendering SeasonRecapCard with:', completedRecord)}
-                <SeasonRecapCard
-  record={completedRecord}
-  totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
-  onNewSeason={() => setShowRecap(false)}
-  onShare={handleShare}
-/>
-              </>
-            ) : (
-              // --- Active season UI (only shown if recap is NOT triggered) ---
-              <>
-                {/* All your existing active season UI goes here (the previous content of this block) */}
-              </>
-            )}
+            {completedRecord ? (
+  <>
+    {console.log('Rendering SeasonRecapCard with:', completedRecord)}
+    <SeasonRecapCard
+      record={completedRecord}
+      totalDonated={totalDonations ? totalDonations.totalDonated / 1000000 : 0}
+      onNewSeason={() => setCompletedRecord(null)}
+      onShare={handleShare}
+    />
+  </>
+) : (
+  // --- Active season UI (only shown if recap is NOT triggered) ---
+  <>
+    {/* All your existing active season UI goes here (the previous content of this block) */}
+  </>
+)}
 
             {txHash && showTxMessage && (
               <div className="mt-4 text-sm text-center transition-opacity duration-500 ease-in-out" 
