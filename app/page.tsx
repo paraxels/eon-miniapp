@@ -193,7 +193,8 @@ const openUrl = useOpenUrl();
   const fetchTotalDonations = async () => {
     try {
       setIsLoadingTotalDonations(true);
-      const response = await fetch('/api/total-donations');
+      const cacheBuster = Date.parse(new Date().toString());
+      const response = await fetch(`/api/total-donations?timestamp=${cacheBuster}`);
       const data = await response.json();
       
       if (response.ok && data.success) {
@@ -210,13 +211,41 @@ const openUrl = useOpenUrl();
     }
   };
 
-  // Effect to fetch total donations every 5 seconds
+  // Effect to fetch total donations and wallet donation progress every 5 seconds
   useEffect(() => {
-    fetchTotalDonations(); // Initial fetch
-    const interval = setInterval(fetchTotalDonations, 5000); // Refetch every 5 seconds
-
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, []);
+    let isMounted = true;
+    // Helper to fetch both total and wallet-specific donations
+    const poll = async () => {
+      await fetchTotalDonations();
+      // Only check for user donations if wallet is connected and active record exists
+      if (address && existingRecord && existingRecord.active && existingRecord.timestamp) {
+        try {
+          const response = await fetch(`/api/donation-progress?address=${address}`);
+          const data = await response.json();
+          if (response.ok && data.success) {
+            // Only update if new donations (by totalDonated or transaction count)
+            if (
+              (!donationProgress) ||
+              (data.totalDonated !== donationProgress.totalDonated) ||
+              (data.transactionCount !== donationProgress.transactionCount)
+            ) {
+              setDonationProgress(data);
+            }
+          } else {
+            console.error('Error fetching donation progress:', data.error);
+          }
+        } catch (error) {
+          console.error('Failed to fetch donation progress:', error);
+        }
+      }
+    };
+    poll(); // Initial fetch
+    const interval = setInterval(poll, 5000); // Refetch every 5 seconds
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [address, existingRecord]);
 
   // Effect to fetch existing active records when wallet connects
   useEffect(() => {
