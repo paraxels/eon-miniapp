@@ -16,7 +16,7 @@ export async function GET() {
       buttonTitle: `Begin`,
       splashImageUrl: process.env.NEXT_PUBLIC_SPLASH_IMAGE_URL,
       splashBackgroundColor: `#${process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR}`,
-      webhookUrl: `${URL}/api/webhook`,
+      webhookUrl: `https://api.neynar.com/f/app/eae85705-7db9-4c2c-9887-163266c68bb3/event`,
       primaryCategory: `social`
     },
   });
