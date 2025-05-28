@@ -62,7 +62,7 @@ const SPENDER_ADDRESS = isTestnet ? SPENDER_ADDRESSES.testnet : SPENDER_ADDRESSE
 // App Content component
 function AppContent() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
-const openUrl = useOpenUrl();
+  const openUrl = useOpenUrl();
   const [frameAdded, setFrameAdded] = useState(false);
   const [amount, setAmount] = useState(5);
   const [percentage, setPercentage] = useState(10);
@@ -72,6 +72,17 @@ const openUrl = useOpenUrl();
   const [error, setError] = useState("");
   const [userFid, setUserFid] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+  
+  // Get addFrame from MiniKit
+  const addFrame = useAddFrame();
+  
+  // Define handleAddFrame at the top of the component
+  const handleAddFrame = useCallback(async () => {
+    console.log('Attempting to add frame...');
+    const frameAdded = await addFrame();
+    setFrameAdded(Boolean(frameAdded));
+    return Boolean(frameAdded); // Return boolean result for use in other functions
+  }, [addFrame]);
   
   // Get account info from Wagmi
   const { isConnected, address, chainId } = useAccount();
@@ -136,7 +147,7 @@ const openUrl = useOpenUrl();
 
   // Function to manage user profile - consolidated create/update/fetch into one function
   // to prevent duplicate/parallel API calls
-  const manageUserProfile = async (fid: string, username?: string, wallet?: string) => {
+  const manageUserProfile = async (fid: string, username?: string, wallet?: string, updatePromptShown?: boolean) => {
     if (!fid) return null;
     
     try {
@@ -152,7 +163,8 @@ const openUrl = useOpenUrl();
         body: JSON.stringify({
           fid,
           username,
-          wallet
+          wallet,
+          ...(updatePromptShown ? { shownAddMiniappPrompt: true } : {})
         }),
       });
       
@@ -169,6 +181,34 @@ const openUrl = useOpenUrl();
     } catch (error) {
       console.error('Failed to manage user profile:', error);
       return null;
+    }
+  };
+  
+  // Function to update user profile prompt flag
+  const updatePromptShown = async (fid: string) => {
+    if (!fid) return;
+    
+    try {
+      const response = await fetch('/api/user-profiles', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fid,
+          shownAddMiniappPrompt: true
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log('Updated add miniapp prompt flag');
+        // Update local state
+        setUserProfile((prev: any) => prev ? {...prev, shownAddMiniappPrompt: true} : null);
+      }
+    } catch (error) {
+      console.error('Failed to update prompt shown flag:', error);
     }
   };
 
@@ -210,6 +250,28 @@ const openUrl = useOpenUrl();
     }
   }, [context]);
   
+  // Create a separate effect specifically for the auto frame adding
+  useEffect(() => {
+    // Only run this effect if we have both the user profile and the FID
+    if (userProfile && userFid && context) {
+      // Check if we need to show the add miniapp prompt
+      if (userProfile.shownAddMiniappPrompt === false && !context.client?.added) {
+        console.log('First visit detected, automatically prompting to add frame');
+        // Small delay to ensure UI is ready
+        const promptTimeoutId = setTimeout(() => {
+          handleAddFrame().then(added => {
+            if (added) {
+              // Update the user profile to indicate prompt was shown
+              updatePromptShown(userFid);
+            }
+          });
+        }, 1000);
+        
+        return () => clearTimeout(promptTimeoutId);
+      }
+    }
+  }, [userProfile, userFid, context, handleAddFrame, updatePromptShown]);
+  
   // Consolidated effect to manage user profile when user identity is available
   useEffect(() => {
     // Only proceed if we have a Farcaster ID
@@ -233,7 +295,7 @@ const openUrl = useOpenUrl();
       
       return () => clearTimeout(timeoutId);
     }
-  }, [userFid, context, isConnected, address]);
+  }, [userFid, context, isConnected, address, manageUserProfile]);
 
   // Custom theme colors
   const themeStyles = {
@@ -243,7 +305,7 @@ const openUrl = useOpenUrl();
     "--app-card-background": "#FAFAF0",
   } as React.CSSProperties;
 
-  const addFrame = useAddFrame();
+  // addFrame and handleAddFrame are already defined at the top of the component
 
   useEffect(() => {
     if (!isFrameReady) {
@@ -575,10 +637,7 @@ const openUrl = useOpenUrl();
     }
   }, [isConfirmed, hash, transactionToRecord]);
 
-  const handleAddFrame = useCallback(async () => {
-    const frameAdded = await addFrame();
-    setFrameAdded(Boolean(frameAdded));
-  }, [addFrame]);
+  // Removed duplicate handleAddFrame function
 
   const increaseAmount = () => {
     setAmount(prev => prev + 1);
