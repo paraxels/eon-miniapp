@@ -71,6 +71,7 @@ const openUrl = useOpenUrl();
   const [showTxMessage, setShowTxMessage] = useState(false);
   const [error, setError] = useState("");
   const [userFid, setUserFid] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   
   // Get account info from Wagmi
   const { isConnected, address, chainId } = useAccount();
@@ -133,10 +134,60 @@ const openUrl = useOpenUrl();
   // Chain switching
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
+  // Function to manage user profile - consolidated create/update/fetch into one function
+  // to prevent duplicate/parallel API calls
+  const manageUserProfile = async (fid: string, username?: string, wallet?: string) => {
+    if (!fid) return null;
+    
+    try {
+      console.log('Managing user profile for FID:', fid);
+      
+      // Skip separate fetch call and just use POST to create/update
+      // The API now handles this with upsert functionality
+      const response = await fetch('/api/user-profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fid,
+          username,
+          wallet
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log(`User profile ${data.isNewProfile ? 'created' : 'updated'}:`, data.profile);
+        setUserProfile(data.profile);
+        return data.profile;
+      } else {
+        console.error('Error managing user profile:', data.error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to manage user profile:', error);
+      return null;
+    }
+  };
+
   // Effect to get the user's FID from the MiniKit context
   useEffect(() => {
     if (context) {
       console.log('Farcaster context loaded:', context);
+      
+      // Extract username from context if available
+      let username: string | undefined;
+      if (context.user?.username) {
+        username = context.user.username;
+      } else if ((context as any)?.client?.user?.username) {
+        username = (context as any).client.user.username;
+      }
+      
+      if (username) {
+        console.log('Found username:', username);
+      }
       
       // Direct access to user.fid which is shown in the logs
       if (context.user?.fid) {
@@ -158,6 +209,31 @@ const openUrl = useOpenUrl();
       }
     }
   }, [context]);
+  
+  // Consolidated effect to manage user profile when user identity is available
+  useEffect(() => {
+    // Only proceed if we have a Farcaster ID
+    if (userFid) {
+      // Extract username from context if available
+      let username: string | undefined;
+      if (context?.user?.username) {
+        username = context.user.username;
+      } else if ((context as any)?.client?.user?.username) {
+        username = (context as any).client.user.username;
+      }
+      
+      // Get wallet address if connected
+      const wallet = isConnected && address ? address : undefined;
+      
+      // Use our consolidated management function to handle the profile
+      // This will create or update as needed and return the profile
+      const timeoutId = setTimeout(() => {
+        manageUserProfile(userFid, username, wallet);
+      }, 100); // Small delay to debounce multiple calls
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [userFid, context, isConnected, address]);
 
   // Custom theme colors
   const themeStyles = {
