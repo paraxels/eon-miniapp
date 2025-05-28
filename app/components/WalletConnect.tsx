@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 // No global declarations needed
 
@@ -12,10 +12,6 @@ export function WalletConnect() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   
-  // Create refs for the dropdown and button
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  
   // Console log on initial render
   console.log('[WALLET] Initial render:', { 
     isConnected, 
@@ -23,6 +19,20 @@ export function WalletConnect() {
     connectorName: connector?.name,
     availableConnectors: connectors.map(c => c.name)
   });
+  
+  // For debugging - check if auto-connect is disabled
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isDisabled = localStorage.getItem('eon_disable_auto_connect') === 'true';
+      console.log('[WALLET] Auto-connect disabled in localStorage:', isDisabled);
+      
+      // Reset the flag to enable auto-connection again
+      if (isDisabled) {
+        console.log('[WALLET] Resetting auto-connect flag');
+        localStorage.removeItem('eon_disable_auto_connect');
+      }
+    }
+  }, []);
 
   // Find the Farcaster Frame connector
   const farcasterConnector = useMemo(() => {
@@ -79,30 +89,24 @@ export function WalletConnect() {
     }
   }, [isConnected, isDisconnecting]);
   
-  // Click outside handler to close dropdown
+  // Handle clicking outside the dropdown to close it
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      // If dropdown is shown and click is outside dropdown and button
-      if (
-        showDropdown && 
-        dropdownRef.current && 
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If the dropdown is open and the click wasn't on a dropdown element
+      if (showDropdown && !(event.target as Element).closest('.wallet-dropdown-container')) {
         console.log('[WALLET] Click outside detected, closing dropdown');
         setShowDropdown(false);
       }
-    }
+    };
     
-    // Add event listener when dropdown is shown
+    // Only add listener when dropdown is shown
     if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('click', handleClickOutside);
     }
     
-    // Clean up event listener
+    // Cleanup
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [showDropdown]);
 
@@ -154,9 +158,8 @@ export function WalletConnect() {
 
   if (isConnected && address) {
     return (
-      <div className="relative">
+      <div className="relative wallet-dropdown-container">
         <button
-          ref={buttonRef}
           onClick={() => setShowDropdown(!showDropdown)}
           className="flex items-center px-3 py-1.5 rounded-md border border-gray-200"
         >
@@ -165,9 +168,7 @@ export function WalletConnect() {
         </button>
         
         {showDropdown && (
-          <div 
-            ref={dropdownRef}
-            className="absolute left-0 top-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 py-2 w-60 z-10">
+          <div className="absolute left-0 top-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 py-2 w-60 z-10">
             <div className="px-4 py-2 border-b border-gray-100">
               <p className="text-xs text-gray-500 font-medium">Connected Wallet</p>
               <p className="text-sm font-mono break-all">{address}</p>
