@@ -76,10 +76,11 @@ function AppContent() {
   // Modal state for custom dialogs (replacing alert/confirm)
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-  const [modalType, setModalType] = useState<'alert' | 'confirm'>('alert');
+  const [modalType, setModalType] = useState<'alert' | 'confirm' | 'info'>('alert');
   // For tracking action type and data
   const [actionType, setActionType] = useState<string>('');
   const [actionData, setActionData] = useState<any>(null);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   
   // Get addFrame from MiniKit
   const addFrame = useAddFrame();
@@ -863,14 +864,15 @@ function AppContent() {
   }
 
   // Modal component (defined at module level to avoid hook issues)
-  function Modal({ isOpen, message, type, onConfirm, onCancel, onClose, actionType }: {
+  function Modal({ isOpen, message, type, onConfirm, onCancel, onClose, actionType, children }: {
     isOpen: boolean;
     message: string;
-    type: 'alert' | 'confirm';
+    type: 'alert' | 'confirm' | 'info';
     onConfirm: () => void;
     onCancel: () => void;
     onClose: () => void;
     actionType?: string;
+    children?: React.ReactNode;
   }) {
     if (!isOpen) return null;
     
@@ -894,9 +896,16 @@ function AppContent() {
         style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
         onClick={handleBackdropClick}
       >
-        <div className="bg-white rounded-lg p-6 max-w-sm mx-auto">
+        <div className={`${type === 'info' ? 'bg-[var(--app-card-background)] max-w-md' : 'bg-white max-w-sm'} rounded-lg p-6 mx-auto border border-[var(--app-border)] shadow-sm`}>
           <div className="mb-6">
-            <p className="text-gray-800 text-center">{message}</p>
+            {type === 'info' ? (
+              <>
+                <h3 className="text-xl font-semibold text-[var(--app-accent,#3B8A73)] mb-4 text-center">{message}</h3>
+                {children}
+              </>
+            ) : (
+              <p className="text-gray-800 text-center">{message}</p>
+            )}
           </div>
           <div className="flex justify-center space-x-4">
             {type === 'confirm' && (
@@ -908,7 +917,11 @@ function AppContent() {
               </button>
             )}
             <button 
-              className={`px-4 py-2 rounded-md ${type === 'confirm' && actionType === 'cancel-season' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-white'}`}
+              className={`px-4 py-2 rounded-md ${
+                type === 'confirm' && actionType === 'cancel-season' 
+                  ? 'bg-red-500 hover:bg-red-600 text-white' 
+                  : 'bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-white'
+              }`}
               onClick={type === 'confirm' ? onConfirm : onClose}
             >
               {type === 'confirm' 
@@ -937,9 +950,9 @@ function AppContent() {
           <div>{saveFrameButton}</div>
         </header>
         
-        <div className="text-center my-8">
-          <h1 className="text-6xl mb-3 mt-2 text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
-          
+        <div className="text-center mt-8 mb-4">
+          <h1 className="text-6xl mb-2 mt-2 text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
+          <p className="text-lg mb-2 text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
           {/* Total donations counter */}
           <div className="text-lg font-medium text-[var(--app-accent)] mb-0">
             {totalDonations ? (
@@ -952,7 +965,7 @@ function AppContent() {
           </div>
           
           {/* Transaction record count */}
-          <div className="text-sm font-medium text-[var(--app-accent)] mb-4">
+          <div className="text-sm font-medium text-[var(--app-accent)]">
             {transactionRecordCount ? (
               <span>{transactionRecordCount} donations</span>
             ) : (
@@ -960,7 +973,22 @@ function AppContent() {
             )}
           </div>
           
-          <p className="text-lg mt-2 text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
+          
+          <div className="flex justify-center">
+            <button 
+              onClick={() => {
+                setModalType('info');
+                setModalMessage('About EON');
+                setModalOpen(true);
+              }}
+              className="text-[var(--app-foreground-muted)] text-xs cursor-pointer font-medium flex items-center"
+            >
+              How it works
+              <svg className="size-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
         </div>
         
         <div className="w-full rounded-lg overflow-hidden border border-[var(--app-border)] bg-[var(--app-card-background)] shadow-sm">
@@ -1179,6 +1207,15 @@ function AppContent() {
         message={modalMessage}
         type={modalType}
         actionType={actionType}
+        children={modalType === 'info' && (
+          <div className="text-[var(--app-foreground)] text-sm space-y-4">
+            <ol className="list-decimal pl-5 space-y-2">
+            <p><strong className="text-[var(--app-accent,#3B8A73)]">What it does:</strong> Eon allows users to forward a small part of what they earn on farcaster to charity, with the belief that individuals will not even notice these micropayments, but together they add up to make a big difference</p>
+            <p><strong className="text-[var(--app-accent,#3B8A73)]">How it works:</strong> Users approve EON for a USDC allowance and decide what % of their farcaster revenue they want to be donated. EON then monitors the users conencted wallet for incomming transactions and automatically forwards the donation percentage.</p>
+            <p>Currently the default destination for funds is <a href="https://endaoment.org/" className="text-[var(--app-accent,#3B8A73)] underline">Enadoment</a>'s <a href="https://app.endaoment.org/universal" className="text-[var(--app-accent,#3B8A73)] underline">Universal Impact Pool</a>, which serves as a matching pool for any direct donations made on Endaoment's platform. Being able to select a specific charity for your donations is coming soon!</p>
+            </ol>
+          </div>
+        )}
         onConfirm={() => {
           // Handle the confirmation action based on action type
           if (actionType === 'cancel-season' && actionData) {
