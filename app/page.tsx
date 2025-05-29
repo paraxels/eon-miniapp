@@ -808,25 +808,6 @@ function AppContent() {
     }
   };
 
-  const fetchTransactionRecordCount = async () => {
-    try {
-      const response = await fetch('/api/transaction-records/count');
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        console.log(`Total transaction records: ${data.count}`);
-        setTransactionRecordCount(data.count);
-      } else {
-        console.error('Error fetching transaction record count:', data.error);
-      }
-    } catch (error) {
-      console.error('Failed to fetch transaction record count:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchTransactionRecordCount();
-  }, []);
 
   const [showRecap, setShowRecap] = useState(true);
 
