@@ -303,7 +303,7 @@ function AppContent() {
       });
       
       // Check if we need to show the add miniapp prompt
-      if (userProfile.shownAddMiniappPrompt === false && !context.client?.added) {
+      if (userProfile.shownAddMiniappPrompt === false) {
         console.log('First visit detected, automatically prompting to add frame');
         console.log('Full context object:', JSON.stringify(context, null, 2));
         
