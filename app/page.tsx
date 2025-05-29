@@ -88,10 +88,26 @@ function AppContent() {
   // Define handleAddFrame at the top of the component
   const handleAddFrame = useCallback(async () => {
     console.log('Attempting to add frame...');
-    const frameAdded = await addFrame();
-    setFrameAdded(Boolean(frameAdded));
-    return Boolean(frameAdded); // Return boolean result for use in other functions
-  }, [addFrame]);
+    try {
+      console.log('Context state before addFrame:', {
+        contextClient: context?.client,
+        clientAdded: context?.client?.added,
+        userFid,
+        userProfileState: userProfile ? {
+          shownAddMiniappPrompt: userProfile.shownAddMiniappPrompt,
+          hasWallet: Boolean(userProfile.wallet)
+        } : null
+      });
+      
+      const frameAdded = await addFrame();
+      console.log('addFrame result:', frameAdded);
+      setFrameAdded(Boolean(frameAdded));
+      return Boolean(frameAdded); // Return boolean result for use in other functions
+    } catch (error) {
+      console.error('Error adding frame:', error);
+      return false;
+    }
+  }, [addFrame, context, userFid, userProfile]);
   
   // Get account info from Wagmi
   const { isConnected, address, chainId } = useAccount();
@@ -291,7 +307,7 @@ function AppContent() {
               updatePromptShown(userFid);
             }
           });
-        }, 1000);
+        }, 100);
         
         return () => clearTimeout(promptTimeoutId);
       } else {
@@ -1285,9 +1301,9 @@ function AppContent() {
         {modalType === 'info' && (
           <div className="text-[var(--app-foreground)] text-sm space-y-4">
             <ol className="list-decimal pl-5 space-y-2">
-              <p><strong className="text-[var(--app-accent,#3B8A73)]">What it does:</strong> Eon allows users to forward a small part of what they earn on farcaster to charity, with the belief that individuals will not even notice these micropayments, but together they add up to make a big difference.</p>
-              <p><strong className="text-[var(--app-accent,#3B8A73)]">How it works:</strong> Users approve EON for a USDC allowance and decide what % of their farcaster revenue they want to be donated. EON then monitors the users connected wallet for incoming transactions and automatically forwards the donation percentage.</p>
-              <p>Currently the default destination for funds is <a href="https://endaoment.org/" className="text-[var(--app-accent,#3B8A73)] underline">Endaoment</a>&apos;s <a href="https://app.endaoment.org/universal" className="text-[var(--app-accent,#3B8A73)] underline">Universal Impact Pool</a>, which serves as a matching pool for any direct donations made on Endaoment&apos;s platform. Being able to select a specific charity for your donations is coming soon!</p>
+              <li><strong className="text-[var(--app-accent,#3B8A73)]">What it does:</strong> Eon allows users to forward a small part of what they earn on farcaster to charity, with the belief that individuals will not even notice these micropayments, but together they add up to make a big difference.</li>
+              <li><strong className="text-[var(--app-accent,#3B8A73)]">How it works:</strong> Users approve EON for a USDC allowance and decide what % of their farcaster revenue they want to be donated. EON then monitors the users connected wallet for incoming transactions and automatically forwards the donation percentage.</li>
+              <li>Currently the default destination for funds is <a href="https://endaoment.org/" className="text-[var(--app-accent,#3B8A73)] underline">Endaoment</a>&apos;s <a href="https://app.endaoment.org/universal" className="text-[var(--app-accent,#3B8A73)] underline">Universal Impact Pool</a>, which serves as a matching pool for any direct donations made on Endaoment&apos;s platform. Being able to select a specific charity for your donations is coming soon!</li>
             </ol>
           </div>
         )}
