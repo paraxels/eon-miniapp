@@ -4,7 +4,7 @@
 import { useMiniKit, useAddFrame } from "@coinbase/onchainkit/minikit";
 import { useOpenUrl } from "@coinbase/onchainkit/minikit";
 import { sdk } from "@farcaster/frame-sdk";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Button } from "./components/DemoComponents";
 import { Icon } from "./components/DemoComponents";
 import { SeasonRecapCard } from "./components/SeasonRecapCard";
@@ -72,6 +72,14 @@ function AppContent() {
   const [error, setError] = useState("");
   const [userFid, setUserFid] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+  
+  // Modal state for custom dialogs (replacing alert/confirm)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalType, setModalType] = useState<'alert' | 'confirm'>('alert');
+  // For tracking action type and data
+  const [actionType, setActionType] = useState<string>('');
+  const [actionData, setActionData] = useState<any>(null);
   
   // Get addFrame from MiniKit
   const addFrame = useAddFrame();
@@ -146,8 +154,8 @@ function AppContent() {
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
   // Function to manage user profile - consolidated create/update/fetch into one function
-  // to prevent duplicate/parallel API calls
-  const manageUserProfile = async (fid: string, username?: string, wallet?: string, updatePromptShown?: boolean) => {
+  // Memoized to prevent unnecessary re-renders
+  const manageUserProfile = useCallback(async (fid: string, username?: string, wallet?: string, updatePromptShown?: boolean) => {
     if (!fid) return null;
     
     try {
@@ -182,12 +190,19 @@ function AppContent() {
       console.error('Failed to manage user profile:', error);
       return null;
     }
-  };
+  }, []);
   
   // Function to update user profile prompt flag
-  const updatePromptShown = async (fid: string) => {
+  const updatePromptShown = useCallback(async (fid: string) => {
     if (!fid) return;
     
+    // Don't update if we've already tried to update or if userProfile already has shownAddMiniappPrompt set to true
+    if (userProfile?.shownAddMiniappPrompt === true) {
+      console.log('Skipping prompt update - already marked as shown');
+      return;
+    }
+    
+    console.log('Updating add miniapp prompt flag in database...');
     try {
       const response = await fetch('/api/user-profiles', {
         method: 'PATCH',
@@ -203,14 +218,17 @@ function AppContent() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        console.log('Updated add miniapp prompt flag');
+        console.log('Successfully updated prompt flag in database');
         // Update local state
-        setUserProfile((prev: any) => prev ? {...prev, shownAddMiniappPrompt: true} : null);
+        setUserProfile((prev: any) => {
+          if (!prev) return null;
+          return {...prev, shownAddMiniappPrompt: true};
+        });
       }
     } catch (error) {
       console.error('Failed to update prompt shown flag:', error);
     }
-  };
+  }, [userProfile]);
 
   // Effect to get the user's FID from the MiniKit context
   useEffect(() => {
@@ -250,13 +268,20 @@ function AppContent() {
     }
   }, [context]);
   
-  // Create a separate effect specifically for the auto frame adding
+  // Use a ref instead of state to track prompt attempts to prevent re-renders
+  const hasTriedPromptRef = useRef(false);
+  
+  // Create a separate effect specifically for the auto frame adding with safeguards
   useEffect(() => {
     // Only run this effect if we have both the user profile and the FID
-    if (userProfile && userFid && context) {
+    // AND we haven't already tried to prompt the user in this session
+    if (userProfile && userFid && context && !hasTriedPromptRef.current) {
       // Check if we need to show the add miniapp prompt
       if (userProfile.shownAddMiniappPrompt === false && !context.client?.added) {
         console.log('First visit detected, automatically prompting to add frame');
+        // Mark that we've attempted to show the prompt in this session
+        hasTriedPromptRef.current = true;
+        
         // Small delay to ensure UI is ready
         const promptTimeoutId = setTimeout(() => {
           handleAddFrame().then(added => {
@@ -268,14 +293,20 @@ function AppContent() {
         }, 1000);
         
         return () => clearTimeout(promptTimeoutId);
+      } else {
+        // Even if we don't prompt, still mark this session as having checked
+        hasTriedPromptRef.current = true;
       }
     }
   }, [userProfile, userFid, context, handleAddFrame, updatePromptShown]);
   
+  // Use ref to prevent multiple profile updates in a session
+  const hasInitializedProfile = useRef(false);
+  
   // Consolidated effect to manage user profile when user identity is available
   useEffect(() => {
-    // Only proceed if we have a Farcaster ID
-    if (userFid) {
+    // Only proceed if we have a Farcaster ID and haven't already initialized profile in this session
+    if (userFid && !hasInitializedProfile.current) {
       // Extract username from context if available
       let username: string | undefined;
       if (context?.user?.username) {
@@ -287,13 +318,12 @@ function AppContent() {
       // Get wallet address if connected
       const wallet = isConnected && address ? address : undefined;
       
-      // Use our consolidated management function to handle the profile
-      // This will create or update as needed and return the profile
-      const timeoutId = setTimeout(() => {
-        manageUserProfile(userFid, username, wallet);
-      }, 100); // Small delay to debounce multiple calls
+      // Mark that we've initialized the profile in this session
+      hasInitializedProfile.current = true;
       
-      return () => clearTimeout(timeoutId);
+      // Use our management function once per session
+      console.log('Initial profile setup for session - FID:', userFid);
+      manageUserProfile(userFid, username, wallet);
     }
   }, [userFid, context, isConnected, address, manageUserProfile]);
 
@@ -832,6 +862,65 @@ function AppContent() {
     );
   }
 
+  // Modal component (defined at module level to avoid hook issues)
+  function Modal({ isOpen, message, type, onConfirm, onCancel, onClose, actionType }: {
+    isOpen: boolean;
+    message: string;
+    type: 'alert' | 'confirm';
+    onConfirm: () => void;
+    onCancel: () => void;
+    onClose: () => void;
+    actionType?: string;
+  }) {
+    if (!isOpen) return null;
+    
+    // Handle clicks outside the modal content
+    const handleBackdropClick = (e: React.MouseEvent) => {
+      // If clicking the backdrop (not the modal content)
+      if (e.target === e.currentTarget) {
+        // For confirmation modals, treat as cancel
+        if (type === 'confirm') {
+          onCancel();
+        } else {
+          // For alert modals, just close
+          onClose();
+        }
+      }
+    };
+    
+    return (
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center" 
+        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        onClick={handleBackdropClick}
+      >
+        <div className="bg-white rounded-lg p-6 max-w-sm mx-auto">
+          <div className="mb-6">
+            <p className="text-gray-800 text-center">{message}</p>
+          </div>
+          <div className="flex justify-center space-x-4">
+            {type === 'confirm' && (
+              <button 
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                onClick={onCancel}
+              >
+                Cancel
+              </button>
+            )}
+            <button 
+              className={`px-4 py-2 rounded-md ${type === 'confirm' && actionType === 'cancel-season' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[var(--app-accent)] hover:bg-[var(--app-accent-hover)] text-white'}`}
+              onClick={type === 'confirm' ? onConfirm : onClose}
+            >
+              {type === 'confirm' 
+                ? (actionType === 'cancel-season' ? 'End Season' : 'Confirm')
+                : 'OK'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)]" style={{
       ...themeStyles,
@@ -1008,41 +1097,27 @@ function AppContent() {
                   onClick={async () => {
                     if (existingRecord && address) {
                       try {
-                        const confirmed = window.confirm('Are you sure you want to cancel your active season?');
-                        if (!confirmed) return;
-                        
-                        setIsApproving(true); // Reuse this state for the cancellation process
-                        
-                        const response = await fetch('/api/cancel-season', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            recordId: existingRecord._id,
-                            walletAddress: address
-                          })
+                        // Show confirmation dialog for cancelling season
+                        setModalMessage('Are you sure you want to end your active season?');
+                        setModalType('confirm');
+                        setActionType('cancel-season');
+                        setActionData({
+                          recordId: existingRecord._id,
+                          walletAddress: address
                         });
+                        setModalOpen(true);
+                        return;
                         
-                        const data = await response.json();
-                        
-                        if (response.ok && data.success) {
-                          setExistingRecord(null);
-                          setAmount(5); // Reset to defaults
-                          setPercentage(10);
-                          alert('Your season has been cancelled.');
-                        } else {
-                          alert(`Failed to cancel: ${data.error || 'Unknown error'}`);
-                        }
+                        // The actual cancellation logic is now in the modal callback
                       } catch (error) {
-                        console.error('Error cancelling season:', error);
-                        alert('An error occurred while cancelling your season.');
-                      } finally {
-                        setIsApproving(false);
+                        console.error('Error setting up cancel modal:', error);
+                        // Fallback in case modal setup fails
                       }
                     }
                   }}
                   disabled={isSending || isConfirming || isApproving}
                 >
-                  {isApproving ? "Cancelling..." : "Cancel Season"}
+                  {isApproving ? "Cancelling..." : "End Season"}
                 </button>
               ) : (
                 <button 
@@ -1097,6 +1172,70 @@ function AppContent() {
           </div>
         </div>
       </div>
+      
+      {/* Render the modal */}
+      <Modal 
+        isOpen={modalOpen}
+        message={modalMessage}
+        type={modalType}
+        actionType={actionType}
+        onConfirm={() => {
+          // Handle the confirmation action based on action type
+          if (actionType === 'cancel-season' && actionData) {
+            // Set loading state
+            setIsApproving(true);
+            
+            // Process the cancel season action
+            fetch('/api/cancel-season', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                recordId: actionData.recordId,
+                walletAddress: actionData.walletAddress
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                // Just update state without showing success popup
+                setExistingRecord(null);
+                setAmount(5); // Reset to defaults
+                setPercentage(10);
+                // No success popup needed
+              } else {
+                // Show error message
+                setModalMessage(`Failed to cancel: ${data.error || 'Unknown error'}`);
+                setModalType('alert');
+                setModalOpen(true);
+              }
+            })
+            .catch(error => {
+              console.error('Error cancelling season:', error);
+              setModalMessage('An error occurred while cancelling your season.');
+              setModalType('alert');
+              setModalOpen(true);
+            })
+            .finally(() => {
+              setIsApproving(false);
+              setActionType('');
+              setActionData(null);
+            });
+          }
+          
+          // Close the modal
+          setModalOpen(false);
+        }}
+        onCancel={() => {
+          // Clear action data and close modal
+          setActionType('');
+          setActionData(null);
+          setModalOpen(false);
+        }}
+        onClose={() => {
+          // Just close the modal for alerts
+          setModalOpen(false);
+        }}
+      />
     </div>
   );
 }

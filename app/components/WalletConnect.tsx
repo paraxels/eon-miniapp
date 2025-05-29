@@ -12,23 +12,15 @@ export function WalletConnect() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   
-  // Console log on initial render
-  console.log('[WALLET] Initial render:', { 
-    isConnected, 
-    address, 
-    connectorName: connector?.name,
-    availableConnectors: connectors.map(c => c.name)
-  });
+  // Initial state - removed excessive console logs
   
   // For debugging - check if auto-connect is disabled
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isDisabled = localStorage.getItem('eon_disable_auto_connect') === 'true';
-      console.log('[WALLET] Auto-connect disabled in localStorage:', isDisabled);
       
       // Reset the flag to enable auto-connection again
       if (isDisabled) {
-        console.log('[WALLET] Resetting auto-connect flag');
         localStorage.removeItem('eon_disable_auto_connect');
       }
     }
@@ -36,18 +28,12 @@ export function WalletConnect() {
 
   // Find the Farcaster Frame connector
   const farcasterConnector = useMemo(() => {
-    const connector = connectors.find(c => c.id === 'farcasterFrame' || c.name === 'Farcaster Frame');
-    console.log('[WALLET] Farcaster connector found:', connector?.name || 'Not found');
-    return connector;
+    return connectors.find(c => c.id === 'farcasterFrame' || c.name === 'Farcaster Frame');
   }, [connectors]);
 
-  // Log when connection state changes
+  // Track connection state changes (removed excessive logs)
   useEffect(() => {
-    console.log('[WALLET] Connection state changed:', { 
-      isConnected, 
-      address, 
-      connectorName: connector?.name 
-    });
+    // Connection state tracking
   }, [isConnected, address, connector]);
   
   // Check if auto-connect is allowed
@@ -62,13 +48,11 @@ export function WalletConnect() {
   // Auto-connect on page load - only if explicitly allowed
   useEffect(() => {
     if (!autoConnectAllowed) {
-      console.log('[WALLET] Auto-connect disabled by user preference');
       return;
     }
     
     // Only attempt to connect if we have connectors and are not already connected
     if (connectors.length > 0 && !isConnected) {
-      console.log('[WALLET] Auto-connecting with first available connector:', connectors[0].name);
       try {
         // Use a timeout to ensure this runs after initial render
         setTimeout(() => {
@@ -83,7 +67,6 @@ export function WalletConnect() {
   // Effect for handling disconnect state
   useEffect(() => {
     if (isDisconnecting && !isConnected) {
-      console.log('[WALLET] Disconnect complete');
       setIsDisconnecting(false);
       // No page reload needed - React state should handle UI updates
     }
@@ -94,7 +77,6 @@ export function WalletConnect() {
     const handleClickOutside = (event: MouseEvent) => {
       // If the dropdown is open and the click wasn't on a dropdown element
       if (showDropdown && !(event.target as Element).closest('.wallet-dropdown-container')) {
-        console.log('[WALLET] Click outside detected, closing dropdown');
         setShowDropdown(false);
       }
     };
@@ -113,33 +95,27 @@ export function WalletConnect() {
   // Custom disconnect function that works better with Farcaster frames
   const handleDisconnect = async () => {
     try {
-      console.log('[WALLET] Starting disconnect process');
       setIsDisconnecting(true);
       setShowDropdown(false);
       
       // Try standard disconnect first
       await disconnect();
-      console.log('[WALLET] Standard disconnect completed');
       
       // Disable auto-connect permanently in localStorage
       if (typeof window !== 'undefined') {
-        console.log('[WALLET] Disabling auto-connect in localStorage');
         localStorage.setItem('eon_disable_auto_connect', 'true');
         setAutoConnectAllowed(false);
       }
       
       // Extra handling for Coinbase Wallet in Farcaster frames
       if (typeof window !== 'undefined' && window.localStorage) {
-        console.log('[WALLET] Cleaning up localStorage items');
         // Clear relevant connection data from localStorage
         const keysToRemove = ['wagmi.connected', 'wagmi.wallet', 'wagmi.account', 'wagmi.injected.shimDisconnect'];
         keysToRemove.forEach(key => {
           try {
-            const hasKey = localStorage.getItem(key) !== null;
-            console.log(`[WALLET] ${key} exists: ${hasKey}`);
             localStorage.removeItem(key);
           } catch (e) {
-            console.error(`[WALLET] Failed to remove ${key} from localStorage`, e);
+            console.error(`Failed to remove ${key} from localStorage`, e);
           }
         });
       }
@@ -193,20 +169,15 @@ export function WalletConnect() {
     <button
       type="button"
       onClick={() => {
-        console.log('[WALLET] Connect button clicked');
         try {
           if (farcasterConnector) {
-            console.log('[WALLET] Connecting with Farcaster connector');
             connect({ connector: farcasterConnector });
-            console.log('[WALLET] Connection attempt initiated');
           } else if (connectors.length > 0) {
             // Fallback to the first connector if Farcaster connector is not found
-            console.log('[WALLET] Connecting with fallback connector:', connectors[0].name);
             connect({ connector: connectors[0] });
-            console.log('[WALLET] Connection attempt initiated');
           }
         } catch (err) {
-          console.error('[WALLET] Connection error:', err);
+          console.error('Connection error:', err);
         }
       }}
       className="bg-[#7AC488] text-white px-4 py-2 rounded-md font-medium hover:bg-[#68B476] active:bg-[#56A364] transition-colors"
