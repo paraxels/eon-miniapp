@@ -293,26 +293,51 @@ function AppContent() {
     // Only run this effect if we have both the user profile and the FID
     // AND we haven't already tried to prompt the user in this session
     if (userProfile && userFid && context && !hasTriedPromptRef.current) {
+      console.log('Frame adding conditions check:', {
+        hasUserProfile: Boolean(userProfile),
+        hasUserFid: Boolean(userFid),
+        hasContext: Boolean(context),
+        hasTriedPrompt: hasTriedPromptRef.current,
+        shownAddMiniappPrompt: userProfile?.shownAddMiniappPrompt,
+        clientAdded: context?.client?.added
+      });
+      
       // Check if we need to show the add miniapp prompt
       if (userProfile.shownAddMiniappPrompt === false && !context.client?.added) {
         console.log('First visit detected, automatically prompting to add frame');
+        console.log('Full context object:', JSON.stringify(context, null, 2));
+        
         // Mark that we've attempted to show the prompt in this session
         hasTriedPromptRef.current = true;
         
         // Small delay to ensure UI is ready
         const promptTimeoutId = setTimeout(() => {
-          handleAddFrame().then(added => {
-            if (added) {
-              // Update the user profile to indicate prompt was shown
-              updatePromptShown(userFid);
-            }
-          });
+          console.log('Timeout fired, calling handleAddFrame...');
+          
+          handleAddFrame()
+            .then(added => {
+              console.log('handleAddFrame promise resolved with:', added);
+              if (added) {
+                // Update the user profile to indicate prompt was shown
+                console.log('Updating prompt shown flag...');
+                updatePromptShown(userFid);
+              } else {
+                console.log('Frame was not added, not updating prompt shown flag');
+              }
+            })
+            .catch(error => {
+              console.error('Error in handleAddFrame promise chain:', error);
+            });
         }, 100);
         
         return () => clearTimeout(promptTimeoutId);
       } else {
         // Even if we don't prompt, still mark this session as having checked
         hasTriedPromptRef.current = true;
+        console.log('Not showing prompt because:', {
+          shownAddMiniappPromptIsFalse: userProfile.shownAddMiniappPrompt === false,
+          contextClientAddedIsTrue: Boolean(context.client?.added)
+        });
       }
     }
   }, [userProfile, userFid, context, handleAddFrame, updatePromptShown]);
