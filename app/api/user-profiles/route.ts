@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '../../../lib/mongodb';
-import { MongoClient } from 'mongodb';
+// import { MongoClient } from 'mongodb';
 
 // Define interface for user profile
-interface UserProfile {
-  fid: string;
-  username: string | null;
-  wallets: string[];
-  firstVisitAt: Date;
-  lastVisitAt: Date;
-  shownAddMiniappPrompt: boolean;
-}
+// interface UserProfile {
+//   fid: string;
+//   username: string | null;
+//   wallets: string[];
+//   firstVisitAt: Date;
+//   lastVisitAt: Date;
+//   shownAddMiniappPrompt: boolean;
+// }
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     
     // Use updateOne with upsert to create or update the document atomically
     // This prevents race conditions that create duplicate profiles
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
       // Fields to update on existing profile
       $set: {
@@ -114,6 +115,7 @@ export async function PATCH(request: NextRequest) {
     const userProfilesCollection = db.collection('user_profiles');
 
     // Update specific fields
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: Record<string, any> = { lastVisitAt: new Date() };
     
     if (shownAddMiniappPrompt !== undefined) {

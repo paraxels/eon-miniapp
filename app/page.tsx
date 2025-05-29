@@ -301,13 +301,15 @@ function AppContent() {
     }
   }, [userProfile, userFid, context, handleAddFrame, updatePromptShown]);
   
-  // Use ref to prevent multiple profile updates in a session
-  const hasInitializedProfile = useRef(false);
+  // Use ref to track basic profile initialization (without wallet)
+  const hasInitializedBasicProfile = useRef(false);
+  // Use ref to track if we've already associated this wallet
+  const lastAssociatedWallet = useRef<string | null>(null);
   
   // Consolidated effect to manage user profile when user identity is available
   useEffect(() => {
-    // Only proceed if we have a Farcaster ID and haven't already initialized profile in this session
-    if (userFid && !hasInitializedProfile.current) {
+    // Only proceed if we have a Farcaster ID
+    if (userFid) {
       // Extract username from context if available
       let username: string | undefined;
       if (context?.user?.username) {
@@ -316,15 +318,31 @@ function AppContent() {
         username = (context as any).client.user.username;
       }
       
-      // Get wallet address if connected
-      const wallet = isConnected && address ? address : undefined;
+      // Check if we need to do initial profile setup
+      if (!hasInitializedBasicProfile.current) {
+        console.log('Initial basic profile setup for session - FID:', userFid);
+        hasInitializedBasicProfile.current = true;
+        
+        // Initialize profile (with wallet if connected)
+        const wallet = isConnected && address ? address : undefined;
+        manageUserProfile(userFid, username, wallet);
+        
+        // Track last associated wallet if one was used
+        if (wallet) {
+          lastAssociatedWallet.current = wallet;
+        }
+        return;
+      }
       
-      // Mark that we've initialized the profile in this session
-      hasInitializedProfile.current = true;
-      
-      // Use our management function once per session
-      console.log('Initial profile setup for session - FID:', userFid);
-      manageUserProfile(userFid, username, wallet);
+      // Handle wallet connection/change after initial profile setup
+      if (isConnected && address) {
+        // Only update if this is a different wallet than previously associated
+        if (address !== lastAssociatedWallet.current) {
+          console.log('Associating new wallet with profile:', address);
+          manageUserProfile(userFid, username, address);
+          lastAssociatedWallet.current = address;
+        }
+      }
     }
   }, [userFid, context, isConnected, address, manageUserProfile]);
 
@@ -1207,15 +1225,6 @@ function AppContent() {
         message={modalMessage}
         type={modalType}
         actionType={actionType}
-        children={modalType === 'info' && (
-          <div className="text-[var(--app-foreground)] text-sm space-y-4">
-            <ol className="list-decimal pl-5 space-y-2">
-            <p><strong className="text-[var(--app-accent,#3B8A73)]">What it does:</strong> Eon allows users to forward a small part of what they earn on farcaster to charity, with the belief that individuals will not even notice these micropayments, but together they add up to make a big difference</p>
-            <p><strong className="text-[var(--app-accent,#3B8A73)]">How it works:</strong> Users approve EON for a USDC allowance and decide what % of their farcaster revenue they want to be donated. EON then monitors the users conencted wallet for incomming transactions and automatically forwards the donation percentage.</p>
-            <p>Currently the default destination for funds is <a href="https://endaoment.org/" className="text-[var(--app-accent,#3B8A73)] underline">Enadoment</a>'s <a href="https://app.endaoment.org/universal" className="text-[var(--app-accent,#3B8A73)] underline">Universal Impact Pool</a>, which serves as a matching pool for any direct donations made on Endaoment's platform. Being able to select a specific charity for your donations is coming soon!</p>
-            </ol>
-          </div>
-        )}
         onConfirm={() => {
           // Handle the confirmation action based on action type
           if (actionType === 'cancel-season' && actionData) {
@@ -1272,7 +1281,17 @@ function AppContent() {
           // Just close the modal for alerts
           setModalOpen(false);
         }}
-      />
+      >
+        {modalType === 'info' && (
+          <div className="text-[var(--app-foreground)] text-sm space-y-4">
+            <ol className="list-decimal pl-5 space-y-2">
+              <p><strong className="text-[var(--app-accent,#3B8A73)]">What it does:</strong> Eon allows users to forward a small part of what they earn on farcaster to charity, with the belief that individuals will not even notice these micropayments, but together they add up to make a big difference.</p>
+              <p><strong className="text-[var(--app-accent,#3B8A73)]">How it works:</strong> Users approve EON for a USDC allowance and decide what % of their farcaster revenue they want to be donated. EON then monitors the users connected wallet for incoming transactions and automatically forwards the donation percentage.</p>
+              <p>Currently the default destination for funds is <a href="https://endaoment.org/" className="text-[var(--app-accent,#3B8A73)] underline">Endaoment</a>&apos;s <a href="https://app.endaoment.org/universal" className="text-[var(--app-accent,#3B8A73)] underline">Universal Impact Pool</a>, which serves as a matching pool for any direct donations made on Endaoment&apos;s platform. Being able to select a specific charity for your donations is coming soon!</p>
+            </ol>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
