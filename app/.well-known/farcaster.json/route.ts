@@ -17,7 +17,10 @@ export async function GET() {
       splashImageUrl: process.env.NEXT_PUBLIC_SPLASH_IMAGE_URL,
       splashBackgroundColor: `#${process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR}`,
       webhookUrl: `https://api.neynar.com/f/app/eae85705-7db9-4c2c-9887-163266c68bb3/event`,
-      primaryCategory: `social`
+      primaryCategory: `utility`,
+      subtitle: `Compound your impact long term`,
+      description: `Automatically donate a portion of your on-chain earnings to charity. Watch how your impact compounds with community.`,
+      tags: ["charity", "philanthropy", "impact", "give", "social"],
     },
   });
 }
