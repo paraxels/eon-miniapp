@@ -322,7 +322,8 @@ function AppContent() {
                 console.log('Updating prompt shown flag...');
                 updatePromptShown(userFid);
               } else {
-                console.log('Frame was not added, not updating prompt shown flag');
+                console.log('Frame was not added, updating prompt shown flag');
+                updatePromptShown(userFid);
               }
             })
             .catch(error => {
