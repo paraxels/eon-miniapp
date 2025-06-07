@@ -22,7 +22,7 @@ export async function GET() {
       description: `Auto-donate a portion of your on-chain earnings to charity and watch how fast microtransactions add up to make a big difference.`,
       tagline: `Impact, the easy way`,
       tags: ["charity", "philanthropy", "impact", "give", "social"],
-      ogTitle: "EON: Effortless Impact",
+      ogTitle: "EON - Effortless Impact",
       ogDescription: "Auto-donate a small portion of your on-chain earnings and watch it add up to a big difference.",
       ogImageUrl: process.env.NEXT_PUBLIC_HEADER_IMAGE_URL,
       heroImageUrl: process.env.NEXT_PUBLIC_HEADER_IMAGE_URL,
