@@ -45,7 +45,14 @@ export default function RootLayout({
       <head>
         <meta name="color-scheme" content="light" />
       </head>
-      <body className="bg-background" style={{ backgroundColor: '#ffffff', color: '#111111' }}>
+      <body className="bg-background overflow-hidden" style={{ 
+        backgroundColor: '#ffffff', 
+        color: '#111111',
+        margin: 0,
+        height: '100vh',
+        width: '100vw',
+        overflow: 'hidden'
+      }}>
         <Providers>{children}</Providers>
       </body>
     </html>

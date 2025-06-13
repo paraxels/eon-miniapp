@@ -9,7 +9,7 @@ export async function GET() {
     },
     frame: {
       version: process.env.NEXT_PUBLIC_VERSION,
-      name: "EON: Effortless Impact",
+      name: "EON",
       homeUrl: URL,
       iconUrl: process.env.NEXT_PUBLIC_ICON_URL,
       imageUrl: process.env.NEXT_PUBLIC_IMAGE_URL,

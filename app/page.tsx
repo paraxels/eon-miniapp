@@ -976,10 +976,12 @@ function AppContent() {
   }
   
   return (
-    <div className="flex flex-col min-h-screen font-sans text-[var(--app-foreground)]" style={{
+    <div className="flex flex-col h-screen font-sans text-[var(--app-foreground)]" style={{
       ...themeStyles,
       backgroundColor: "#F7F6E7",
       background: "#F7F6E7",
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch' // For smooth scrolling on iOS
     }}>
       <div className="w-full max-w-md mx-auto px-4 py-3" style={{ backgroundColor: "#F7F6E7" }}>
         <header className="flex justify-between items-center mb-3 h-11">
