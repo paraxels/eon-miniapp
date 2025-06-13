@@ -991,27 +991,26 @@ function AppContent() {
           <div>{saveFrameButton}</div>
         </header>
         
-        <div className="text-center mt-8 mb-4">
-          <h1 className="text-6xl mb-2 mt-2 text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
-          <p className="text-lg mb-2 text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
+        <div className="text-center mt-3 mb-4">
+          <h1 className="text-6xl text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
+          <p className="text-lg text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
           {/* Total donations counter */}
-          <div className="text-lg font-medium text-[var(--app-accent)] mb-0">
-            {totalDonations ? (
-              <span>
-                ${(totalDonations.totalDonated / 1000000).toFixed(2)} donated
-              </span>
-            ) : (
-              <span>$0.00 donated</span>
-            )}
-          </div>
-          
-          {/* Transaction record count */}
-          <div className="text-sm font-medium text-[var(--app-accent)]">
-            {transactionRecordCount ? (
-              <span>{transactionRecordCount} donations</span>
-            ) : (
-              <span>No donations</span>
-            )}
+          <div className="flex justify-center items-center gap-2 mb-2">
+            <div className="text-sm font-medium text-[var(--app-accent)]">
+              {totalDonations ? (
+                <span>${(totalDonations.totalDonated / 1000000).toFixed(2)} donated</span>
+              ) : (
+                <span>$0.00 donated</span>
+              )}
+            </div>
+            <div className="w-px h-5 bg-[var(--app-accent)] opacity-30"></div>
+            <div className="text-sm font-medium text-[var(--app-accent)]">
+              {transactionRecordCount ? (
+                <span>{transactionRecordCount} donations</span>
+              ) : (
+                <span>No donations</span>
+              )}
+            </div>
           </div>
           
           
@@ -1025,8 +1024,12 @@ function AppContent() {
               className="text-[var(--app-foreground-muted)] text-xs cursor-pointer font-medium flex items-center"
             >
               How it works
-              <svg className="size-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              <svg className="ml-1" fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="10" height="10">
+                <circle cx="20" cy="20" r="19" stroke="#000" stroke-width="2" fill="none" />
+                <g transform="scale(0.8) translate(2.5,2.5)">
+                  <path d="M24.733,34.318c-0.936,0-1.73,0.322-2.375,0.947c-0.645,0.627-0.968,1.414-0.968,2.338c0,1.035,0.334,1.85,1,2.429 c0.667,0.581,1.449,0.862,2.342,0.862c0.868,0,1.631-0.297,2.295-0.881c0.656-0.582,0.988-1.395,0.988-2.41 c0-0.924-0.32-1.711-0.953-2.338C26.439,34.641,25.657,34.318,24.733,34.318z"/>
+                  <path d="M30.896,8.772c-1.631-0.791-3.51-1.18-5.629-1.18c-2.295,0-4.294,0.473-6.005,1.401c-1.718,0.943-3.026,2.126-3.919,3.562 C14.45,13.978,14,15.394,14,16.787c0,0.67,0.281,1.295,0.848,1.889c0.561,0.565,1.258,0.861,2.076,0.861 c1.395,0,2.342-0.832,2.844-2.488c0.527-1.574,1.172-2.777,1.935-3.59c0.762-0.817,1.946-1.225,3.564-1.225 c1.377,0,2.502,0.406,3.375,1.205c0.871,0.813,1.31,1.802,1.31,2.98c0,0.602-0.147,1.16-0.429,1.66 c-0.289,0.515-0.643,0.984-1.055,1.397c-0.419,0.425-1.103,1.047-2.039,1.866c-1.072,0.941-1.922,1.743-2.548,2.428 c-0.632,0.686-1.138,1.464-1.522,2.382c-0.378,0.9-0.57,1.959-0.57,3.199c0,0.975,0.259,1.721,0.783,2.217 c0.519,0.496,1.162,0.75,1.923,0.75c1.464,0,2.334-0.768,2.62-2.293c0.161-0.713,0.28-1.211,0.358-1.506 c0.084-0.281,0.192-0.562,0.342-0.857c0.149-0.281,0.375-0.602,0.675-0.945c0.294-0.345,0.698-0.736,1.194-1.203 c1.805-1.61,3.051-2.753,3.75-3.438c0.697-0.672,1.299-1.486,1.803-2.43C35.744,18.705,36,17.609,36,16.362 c0-1.574-0.441-3.05-1.333-4.388C33.777,10.621,32.521,9.55,30.896,8.772z"/>
+                </g>
               </svg>
             </button>
           </div>
