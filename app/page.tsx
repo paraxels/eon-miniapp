@@ -390,7 +390,7 @@ function AppContent() {
 
   // Custom theme colors
   const themeStyles = {
-    "--app-accent": "#65B073",       // Slightly darker green
+    "--app-accent": "#508F68",       // Slightly darker green
     "--app-accent-hover": "#55A063", // Adjusted hover state
     "--app-accent-active": "#478F53", // Adjusted active state
     "--app-card-background": "#FAFAF0",
@@ -870,7 +870,7 @@ function AppContent() {
           </header>
 
           <div className="text-center my-8">
-            <h1 className="text-6xl mb-3 mt-2 text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
+            <h1 className="text-6xl" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em', color: '#5FA578' }}>EON</h1>
             <div className="text-lg font-medium text-[var(--app-accent)] mb-0">
               {totalDonations ? (
                 <span>
@@ -992,7 +992,7 @@ function AppContent() {
         </header>
         
         <div className="text-center mt-3 mb-4">
-          <h1 className="text-6xl text-[var(--app-accent)]" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em' }}>EON</h1>
+        <h1 className="text-6xl" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em', color: '#5FA578' }}>EON</h1>
           <p className="text-lg text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
           {/* Total donations counter */}
           <div className="flex justify-center items-center gap-2 mb-2">
@@ -1014,7 +1014,7 @@ function AppContent() {
           </div>
           
           
-          <div className="flex justify-center">
+          <div className="flex mb-6 justify-center">
             <button 
               onClick={() => {
                 setModalType('info');
@@ -1096,10 +1096,6 @@ function AppContent() {
                     </div>
                   )}
                 </div>
-                
-                <p className="text-center text-xs text-gray-500 mt-5 mx-6">
-                  Started on {new Date(existingRecord.timestamp).toLocaleDateString()}
-                </p>
               </div>
             ) : (
               <p className="text-center text-sm text-[var(--app-foreground-muted)] mb-7 mx-6">

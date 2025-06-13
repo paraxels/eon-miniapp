@@ -5,7 +5,7 @@
 :root {
   --background: #ffffff;
   --foreground: #111111;
-  --app-accent: #7AC488;
+  --app-accent: #66AD7B; /* used to be 7AC488 */
   --app-accent-hover: #68B476;
   --app-accent-active: #56A364;
   --app-card-background: #FAFAF0;
