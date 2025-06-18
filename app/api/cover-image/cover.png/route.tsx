@@ -24,7 +24,8 @@ export async function GET() {
     ]);
 
     // Fetch donation data
-    const response = await fetch(`${baseUrl}/api/total-donations`);
+    const cacheBuster = Date.parse(new Date().toString());
+    const response = await fetch(`${baseUrl}/api/total-donations?timestamp=${cacheBuster}`);
     const data = response.ok ? await response.json() : { totalDonated: 0, transactionCount: 0 };
 
     const totalDonated = data.totalDonated ? (data.totalDonated / 1_000_000).toFixed(2) : '0.00';
