@@ -89,13 +89,13 @@ export async function GET() {
               alignItems: 'center', 
               gap: '0.5rem',
               marginBottom: '1rem',
-              fontFamily: 'InterBold'
+              fontFamily: 'Inter'
             }}>
               <span style={{ 
                 fontSize: 45, 
                 fontWeight: 800, 
                 color: '#5FA578',
-                fontFamily: 'InterBold'
+                fontFamily: 'Inter'
               }}>
                 ${totalDonated} raised
               </span>
@@ -109,7 +109,7 @@ export async function GET() {
                 fontSize: 45, 
                 fontWeight: 800, 
                 color: '#5FA578',
-                fontFamily: 'InterBold'
+                fontFamily: 'Inter'
               }}>
                 {transactionCount} {transactionCount === 1 ? 'donation' : 'donations'}
               </span>
