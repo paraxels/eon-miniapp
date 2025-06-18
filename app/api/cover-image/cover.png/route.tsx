@@ -3,6 +3,7 @@ import { ImageResponse } from 'next/og';
 const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
