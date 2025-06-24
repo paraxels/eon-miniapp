@@ -88,6 +88,11 @@ function AppContent() {
   const [campaignSearch, setCampaignSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedOrganization, setSelectedOrganization] = useState<any>(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const [campaignStep, setCampaignStep] = useState<'profile' | 'finalize'>('profile');
+  const [campaignDonation, setCampaignDonation] = useState(1);
+  const [campaignGoal, setCampaignGoal] = useState(5);
   
   // Function to search organizations using our proxy API
   const searchOrganizations = async (searchTerm: string) => {
@@ -911,24 +916,47 @@ function AppContent() {
           </header>
 
           <div className="text-center my-8">
-            <h1 className="text-6xl" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em', color: '#5FA578' }}>EON</h1>
-            <div className="text-lg font-medium text-[var(--app-accent)] mb-0">
+          <h1 className="text-6xl" style={{ fontFamily: 'var(--font-custom)', letterSpacing: '0.2em', color: '#5FA578' }}>EON</h1>
+          <p className="text-lg text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
+          {/* Total donations counter */}
+          <div className="flex justify-center items-center gap-2 mb-2">
+            <div className="text-sm font-medium text-[var(--app-accent)]">
               {totalDonations ? (
-                <span>
-                  ${(totalDonations.totalDonated / 1000000).toFixed(2)} donated
-                </span>
+                <span>${(totalDonations.totalDonated / 1000000).toFixed(2)} donated</span>
               ) : (
                 <span>$0.00 donated</span>
               )}
             </div>
-            <div className="text-sm font-medium text-[var(--app-accent)] mb-4">
+            <div className="w-px h-5 bg-[var(--app-accent)] opacity-30"></div>
+            <div className="text-sm font-medium text-[var(--app-accent)]">
               {transactionRecordCount ? (
                 <span>{transactionRecordCount} donations</span>
               ) : (
                 <span>No donations</span>
               )}
             </div>
-            <p className="text-lg mt-2 text-[var(--app-foreground-muted)]">compound your impact for the longterm</p>
+          </div>
+          
+          
+          <div className="flex mb-6 justify-center">
+            <button 
+              onClick={() => {
+                setModalType('info');
+                setModalMessage('About EON');
+                setModalOpen(true);
+              }}
+              className="text-[var(--app-foreground-muted)] text-xs cursor-pointer font-medium flex items-center"
+            >
+              How it works
+              <svg className="ml-1" fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="10" height="10">
+                <circle cx="20" cy="20" r="19" stroke="#000" stroke-width="2" fill="none" />
+                <g transform="scale(0.8) translate(2.5,2.5)">
+                  <path d="M24.733,34.318c-0.936,0-1.73,0.322-2.375,0.947c-0.645,0.627-0.968,1.414-0.968,2.338c0,1.035,0.334,1.85,1,2.429 c0.667,0.581,1.449,0.862,2.342,0.862c0.868,0,1.631-0.297,2.295-0.881c0.656-0.582,0.988-1.395,0.988-2.41 c0-0.924-0.32-1.711-0.953-2.338C26.439,34.641,25.657,34.318,24.733,34.318z"/>
+                  <path d="M30.896,8.772c-1.631-0.791-3.51-1.18-5.629-1.18c-2.295,0-4.294,0.473-6.005,1.401c-1.718,0.943-3.026,2.126-3.919,3.562 C14.45,13.978,14,15.394,14,16.787c0,0.67,0.281,1.295,0.848,1.889c0.561,0.565,1.258,0.861,2.076,0.861 c1.395,0,2.342-0.832,2.844-2.488c0.527-1.574,1.172-2.777,1.935-3.59c0.762-0.817,1.946-1.225,3.564-1.225 c1.377,0,2.502,0.406,3.375,1.205c0.871,0.813,1.31,1.802,1.31,2.98c0,0.602-0.147,1.16-0.429,1.66 c-0.289,0.515-0.643,0.984-1.055,1.397c-0.419,0.425-1.103,1.047-2.039,1.866c-1.072,0.941-1.922,1.743-2.548,2.428 c-0.632,0.686-1.138,1.464-1.522,2.382c-0.378,0.9-0.57,1.959-0.57,3.199c0,0.975,0.259,1.721,0.783,2.217 c0.519,0.496,1.162,0.75,1.923,0.75c1.464,0,2.334-0.768,2.62-2.293c0.161-0.713,0.28-1.211,0.358-1.506 c0.084-0.281,0.192-0.562,0.342-0.857c0.149-0.281,0.375-0.602,0.675-0.945c0.294-0.345,0.698-0.736,1.194-1.203 c1.805-1.61,3.051-2.753,3.75-3.438c0.697-0.672,1.299-1.486,1.803-2.43C35.744,18.705,36,17.609,36,16.362 c0-1.574-0.441-3.05-1.333-4.388C33.777,10.621,32.521,9.55,30.896,8.772z"/>
+                </g>
+              </svg>
+            </button>
+          </div>
           </div>
 
           {/* Only show the recap card in place of the main card */}
@@ -1322,6 +1350,158 @@ function AppContent() {
                     </button>
                   </div>
                 </>
+              ) : selectedOrganization ? (
+                <div className="w-full max-w-md mx-auto flex flex-col flex-grow">
+                  {/* Back button - goes back to search or profile depending on current step */}
+                  <div className="self-start">
+                    <button 
+                      className="flex items-center justify-center w-8 h-8 rounded-md text-[var(--app-foreground-muted)] hover:text-[var(--app-accent)] transition-colors"
+                      onClick={() => campaignStep === 'profile' ? setSelectedOrganization(null) : setCampaignStep('profile')}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="black" viewBox="0 0 16 16">
+                        <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {/* Logo and name header - shown on both profile and finalize screens */}
+                  <div className="flex items-center mb-4 justify-center">
+                    {/* Logo */}
+                    <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-xl overflow-hidden mr-4">
+                      {selectedOrganization.logo ? (
+                        <img 
+                          src={selectedOrganization.logo} 
+                          alt={`${selectedOrganization.name} logo`} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNFREVERUQiLz48cGF0aCBkPSJNMjAgMTNDMTUuNDEgMTMgMTIgMTYuNDEgMTIgMjFDMTIgMjUuNTkgMTUuNDEgMjkgMjAgMjlDMjQuNTkgMjkgMjggMjUuNTkgMjggMjFDMjggMTYuNDEgMjQuNTkgMTMgMjAgMTNaTTIwIDE2QzIxLjY1NyAxNiAyMyAxNy4zNDMgMjMgMTlDMjMgMjAuNjU3IDIxLjY1NyAyMiAyMCAyMkMxOC4zNDMgMjIgMTcgMjAuNjU3IDE3IDE5QzE3IDE3LjM0MyAxOC4zNDMgMTYgMjAgMTZaTTIwIDI3QzE3LjUgMjcgMTUuMjcgMjUuODkgMTQgMjRDMTQuMDIgMjIuMzcgMTcuMzUgMjEuNTQgMjAgMjEuNTRDMjIuNjQgMjEuNTQgMjUuOTggMjIuMzcgMjYgMjRDMjQuNzMgMjUuODkgMjIuNSAyNyAyMCAyN1oiIGZpbGw9IiM5Mjk0OTciLz48L3N2Zz4=';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-[var(--app-background)] text-[var(--app-foreground-muted)]">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                            <circle cx="9" cy="9" r="2"></circle>
+                            <path d="M15 13h-3.5a2 2 0 0 0-2 2v4"></path>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Name */}
+                    <h2 className="text-xl font-semibold">{selectedOrganization.name}</h2>
+                  </div>
+
+                  {/* Conditional content based on step */}
+                  {campaignStep === 'profile' ? (
+                    /* Profile content */
+                    <div className="flex flex-col items-center">
+                      {/* Description with show more functionality */}
+                      {selectedOrganization.description && (
+                        <div className="w-full text-left mt-2">
+                          <div className="relative">
+                            <p 
+                              className={`text-sm text-[var(--app-foreground-muted)] ${!showFullDescription ? 'line-clamp-3' : ''}`}
+                            >
+                              {selectedOrganization.description}
+                            </p>
+                            {!showFullDescription && (
+                              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[var(--app-card-background)] to-transparent"></div>
+                            )}
+                          </div>
+                          <div className="flex justify-center w-full">
+                            <button 
+                              onClick={() => setShowFullDescription(!showFullDescription)}
+                              className="text-xs text-[var(--app-accent)] hover:underline mt-1"
+                            >
+                              {showFullDescription ? 'Show less' : 'Show more...'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Select button */}
+                      <div className="mt-8 w-full flex justify-center">
+                        <button 
+                          className="bg-[var(--app-accent)] hover:brightness-90 text-white font-medium py-2 px-8 rounded-md transition-all duration-200"
+                          onClick={() => setCampaignStep('finalize')}
+                        >
+                          Select
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Finalize campaign screen */
+                    <div className="flex flex-col items-start w-full">
+                      <div className="w-full py-4">
+                        {/* Donation Amount */}
+                        <div className="mb-10">
+                          <label className="block text-[var(--app-foreground)] text-lg font-medium mb-5">Your donation:</label>
+                          <div className="flex items-center justify-center gap-4">
+                            <button 
+                              onClick={() => setCampaignDonation(prev => prev > 1 ? prev - 1 : 1)}
+                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                            >
+                              <span className="text-xl font-bold">-</span>
+                            </button>
+                            <div className="text-2xl font-bold min-w-[80px] text-center">
+                              ${campaignDonation}
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const newDonation = campaignDonation + 1;
+                                setCampaignDonation(newDonation);
+                                
+                                // Ensure campaign goal is never less than donation amount
+                                if (newDonation > campaignGoal) {
+                                  setCampaignGoal(newDonation);
+                                }
+                              }}
+                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                            >
+                              <span className="text-xl font-bold">+</span>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Campaign Goal */}
+                        <div className="mb-10">
+                          <label className="block text-[var(--app-foreground)] text-lg font-medium mb-5">Campaign goal (your donation + tips):</label>
+                          <div className="flex items-center justify-center gap-4">
+                            <button 
+                              onClick={() => setCampaignGoal(prev => Math.max(campaignDonation, prev > 1 ? prev - 1 : 1))}
+                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                            >
+                              <span className="text-xl font-bold">-</span>
+                            </button>
+                            <div className="text-2xl font-bold min-w-[80px] text-center">
+                              ${campaignGoal}
+                            </div>
+                            <button 
+                              onClick={() => setCampaignGoal(prev => prev + 1)}
+                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                            >
+                              <span className="text-xl font-bold">+</span>
+                            </button>
+                          </div>
+                          <div className="text-center text-[10px] text-[var(--app-foreground-muted)] mt-1">
+                            This USDC approval is only a passthrough. When your cast receives a tip, an equivalent donation will be made from this balance
+                          </div>
+                        </div>
+                        
+                        {/* Start Campaign Button */}
+                        <div className="mt-8 w-full flex justify-center">
+                          <button 
+                            className="bg-[var(--app-accent)] hover:brightness-90 text-white font-medium py-3 px-8 rounded-md transition-all duration-200 w-full max-w-xs"
+                          >
+                            Start Campaign
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="w-full max-w-md mx-auto flex flex-col flex-grow">
                   <div className="relative">
@@ -1359,10 +1539,7 @@ function AppContent() {
                           <div 
                             key={index} 
                             className="p-3 border border-[var(--app-border)] rounded-lg bg-white hover:bg-[#f9f9f9] cursor-pointer transition-colors"
-                            onClick={() => {
-                              // Handle organization selection
-                              console.log('Selected organization:', result);
-                            }}
+                            onClick={() => setSelectedOrganization(result)}
                           >
                             <div className="flex items-start gap-3">
                               {/* Logo */}
