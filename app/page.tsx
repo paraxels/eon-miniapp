@@ -81,6 +81,47 @@ function AppContent() {
   const [actionType, setActionType] = useState<string>('');
   const [actionData, setActionData] = useState<any>(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  // Tab state for 'Seasons' (default) and 'Campaigns'
+  const [selectedTab, setSelectedTab] = useState<'seasons' | 'campaigns'>('seasons');
+  // State to track if campaign search is active
+  const [showCampaignSearch, setShowCampaignSearch] = useState(false);
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Function to search organizations using our proxy API
+  const searchOrganizations = async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      // Use our local API proxy to avoid CORS issues
+      const response = await fetch(`/api/proxy-search?searchTerm=${encodeURIComponent(searchTerm)}`);
+      if (!response.ok) throw new Error('Search request failed');
+      
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+  
+  // Debounce search to prevent too many API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (showCampaignSearch) {
+        searchOrganizations(campaignSearch);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [campaignSearch, showCampaignSearch]);
   
   // Get addFrame from MiniKit
   const addFrame = useAddFrame();
@@ -1035,12 +1076,32 @@ function AppContent() {
               </svg>
             </button>
           </div>
+
+          {/* Tabs for Seasons/Campaigns */}
+          <div className="flex justify-center mb-4">
+            <button
+              className={`px-4 py-2 rounded-t-lg font-medium border-b-2 transition-colors duration-200 ${selectedTab === 'seasons' ? 'border-[var(--app-accent)] text-[var(--app-accent)] bg-[var(--app-card-background)]' : 'border-transparent text-[var(--app-foreground-muted)] bg-transparent hover:text-[var(--app-accent)]'}`}
+              onClick={() => setSelectedTab('seasons')}
+              aria-selected={selectedTab === 'seasons'}
+            >
+              Seasons
+            </button>
+            <button
+              className={`px-4 py-2 rounded-t-lg font-medium border-b-2 transition-colors duration-200 ml-2 ${selectedTab === 'campaigns' ? 'border-[var(--app-accent)] text-[var(--app-accent)] bg-[var(--app-card-background)]' : 'border-transparent text-[var(--app-foreground-muted)] bg-transparent hover:text-[var(--app-accent)]'}`}
+              onClick={() => setSelectedTab('campaigns')}
+              aria-selected={selectedTab === 'campaigns'}
+            >
+              Campaigns
+            </button>
+          </div>
+
         </div>
         
-        <div className="w-full rounded-lg overflow-hidden border border-[var(--app-border)] bg-[var(--app-card-background)] shadow-sm">
-          <div className="bg-[var(--app-accent)] text-white px-4 py-3 font-medium flex justify-between items-center">
-            {existingRecord ? 'Active season' : 'Start a new season'}
-            {existingRecord && (
+        {selectedTab === 'seasons' ? (
+          <div className="w-full rounded-lg overflow-hidden border border-[var(--app-border)] bg-[var(--app-card-background)] shadow-sm">
+            <div className="bg-[var(--app-accent)] text-white px-4 py-3 font-medium flex justify-between items-center">
+              {existingRecord ? 'Active season' : 'Start a new season'}
+              {existingRecord && (
               <span className="text-xs bg-white text-[var(--app-accent)] px-2 py-0.5 rounded-full">
                 Active
               </span>
@@ -1241,6 +1302,117 @@ function AppContent() {
             )}
           </div>
         </div>
+        ) : (
+          <div className="w-full rounded-lg overflow-hidden border border-[var(--app-border)] bg-[var(--app-card-background)] shadow-sm flex flex-col min-h-[calc(100vh-300px)]">
+            <div className="bg-[var(--app-accent)] text-white px-4 py-3 font-medium">
+              Start a New Campaign
+            </div>
+            <div className="p-4 flex flex-col flex-grow">
+              {!showCampaignSearch ? (
+                <>
+                  <p className="text-center text-sm text-[var(--app-foreground-muted)] mb-7 mx-6">
+                    To kick off a campaign donate to a good cause, cast about it, and we'll pass along the tips as donations
+                  </p>
+                  <div className="flex justify-center">
+                    <button 
+                      className="bg-[var(--app-accent)] hover:brightness-90 text-white font-medium py-2 px-6 rounded-md transition-all duration-200"
+                      onClick={() => setShowCampaignSearch(true)}
+                    >
+                      Start Campaign
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="w-full max-w-md mx-auto flex flex-col flex-grow">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 border border-[var(--app-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--app-accent)] focus:border-transparent"
+                      placeholder="Search for a cause..."
+                      value={campaignSearch}
+                      onChange={(e) => setCampaignSearch(e.target.value)}
+                      autoFocus
+                    />
+                    <button 
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--app-foreground-muted)] hover:text-[var(--app-accent)]"
+                      onClick={() => setCampaignSearch('')}
+                    >
+                      {isSearching ? (
+                        <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 1a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+                          <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm.79 5.13A5.5 5.5 0 0 0 8 5a5.5 5.5 0 0 0-5.5 5.5 5.5 5.5 0 0 0 11 0 5.5 5.5 0 0 0-3.21-5.37"/>
+                        </svg>
+                      ) : campaignSearch && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                          <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Search Results */}
+                  <div className="mt-4 flex-grow overflow-y-auto">
+                    {searchResults.length > 0 ? (
+                      <div className="space-y-3">
+                        {searchResults.map((result, index) => (
+                          <div 
+                            key={index} 
+                            className="p-3 border border-[var(--app-border)] rounded-lg bg-white hover:bg-[#f9f9f9] cursor-pointer transition-colors"
+                            onClick={() => {
+                              // Handle organization selection
+                              console.log('Selected organization:', result);
+                            }}
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Logo */}
+                              <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
+                                {result.logo ? (
+                                  <img 
+                                    src={result.logo} 
+                                    alt={`${result.name} logo`} 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => {
+                                      // Fallback for failed image loads
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNFREVERUQiLz48cGF0aCBkPSJNMjAgMTNDMTUuNDEgMTMgMTIgMTYuNDEgMTIgMjFDMTIgMjUuNTkgMTUuNDEgMjkgMjAgMjlDMjQuNTkgMjkgMjggMjUuNTkgMjggMjFDMjggMTYuNDEgMjQuNTkgMTMgMjAgMTNaTTIwIDE2QzIxLjY1NyAxNiAyMyAxNy4zNDMgMjMgMTlDMjMgMjAuNjU3IDIxLjY1NyAyMiAyMCAyMkMxOC4zNDMgMjIgMTcgMjAuNjU3IDE3IDE5QzE3IDE3LjM0MyAxOC4zNDMgMTYgMjAgMTZaTTIwIDI3QzE3LjUgMjcgMTUuMjcgMjUuODkgMTQgMjRDMTQuMDIgMjIuMzcgMTcuMzUgMjEuNTQgMjAgMjEuNTRDMjIuNjQgMjEuNTQgMjUuOTggMjIuMzcgMjYgMjRDMjQuNzMgMjUuODkgMjIuNSAyNyAyMCAyN1oiIGZpbGw9IiM5Mjk0OTciLz48L3N2Zz4=';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-[var(--app-background)] text-[var(--app-foreground-muted)]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                                      <circle cx="9" cy="9" r="2"></circle>
+                                      <path d="M15 13h-3.5a2 2 0 0 0-2 2v4"></path>
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Content */}
+                              <div className="flex-grow">
+                                <div className="font-medium text-[var(--app-foreground)]">{result.name}</div>
+                                {result.description && (
+                                  <div className="text-xs text-[var(--app-foreground-muted)] mt-1 line-clamp-2">
+                                    {result.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : campaignSearch && !isSearching ? (
+                      <div className="text-center py-6 text-[var(--app-foreground-muted)]">
+                        No organizations found
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Render the modal */}
