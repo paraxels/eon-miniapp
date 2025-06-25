@@ -59,7 +59,7 @@ const ETHERSCAN_URLS = {
 // Spender addresses
 const SPENDER_ADDRESSES = {
   mainnet: "0x49E0575D4aAc65C1FEE53FF1458B03dB14c3F82F",
-  testnet: "0x66B5700036D7E397F721192fA06E17f9c0515F7f" // Using same address for both environments for now
+  testnet: "0x66B5700036D7E397F721192fA06E17f9c0515F7f"
 };
 
 // Check environment
@@ -1418,7 +1418,7 @@ function AppContent() {
               {!showCampaignSearch ? (
                 <>
                   <p className="text-center text-sm text-[var(--app-foreground-muted)] mb-7 mx-6">
-                    To kick off a campaign donate to a good cause, cast about it, and we'll pass along the tips as donations
+                    To kick off a campaign donate to a good cause, cast about it, and we&apos;ll pass along the tips as donations
                   </p>
                   <div className="flex justify-center">
                     <button 
