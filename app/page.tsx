@@ -21,7 +21,7 @@ declare global {
   }
 }
 
-// ERC20 ABI for the approve function
+// ERC20 ABI for the approve function and balanceOf
 const ERC20_ABI = [
   {
     name: "approve",
@@ -32,6 +32,15 @@ const ERC20_ABI = [
     ],
     outputs: [{ name: "", type: "bool" }],
     stateMutability: "nonpayable"
+  },
+  {
+    name: "balanceOf",
+    type: "function",
+    inputs: [
+      { name: "account", type: "address" }
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view"
   }
 ];
 
@@ -93,6 +102,28 @@ function AppContent() {
   const [campaignStep, setCampaignStep] = useState<'profile' | 'finalize'>('profile');
   const [campaignDonation, setCampaignDonation] = useState(1);
   const [campaignGoal, setCampaignGoal] = useState(5);
+  const [usdcBalance, setUsdcBalance] = useState<string>('0');
+  const [showNotEnoughUsdcError, setShowNotEnoughUsdcError] = useState(false);
+  const [showGoalUsdcError, setShowGoalUsdcError] = useState(false);
+  const [showSeasonsUsdcError, setShowSeasonsUsdcError] = useState(false);
+  
+  // Function to handle showing and fading the USDC error message
+  const showUsdcErrorMessage = () => {
+    setShowNotEnoughUsdcError(true);
+    setTimeout(() => setShowNotEnoughUsdcError(false), 1250);
+  };
+  
+  // Function to handle showing and fading the goal USDC error message
+  const showGoalUsdcErrorMessage = () => {
+    setShowGoalUsdcError(true);
+    setTimeout(() => setShowGoalUsdcError(false), 1250);
+  };
+  
+  // Function to handle showing and fading the seasons USDC error message
+  const showSeasonsUsdcErrorMessage = () => {
+    setShowSeasonsUsdcError(true);
+    setTimeout(() => setShowSeasonsUsdcError(false), 1250);
+  };
   
   // Function to search organizations using our proxy API
   const searchOrganizations = async (searchTerm: string) => {
@@ -565,9 +596,31 @@ function AppContent() {
     };
   }, [address, existingRecord, donationProgress, ]);
 
+  // Function to fetch USDC balance
+  const fetchUsdcBalance = async (walletAddress: string) => {
+    if (!walletAddress) return;
+    
+    try {
+      // Use ethers.js or viem to get the USDC balance
+      const response = await fetch(`/api/token-balance?address=${walletAddress}&token=${USDC_ADDRESS}`);
+      const data = await response.json();
+      
+      if (response.ok && data.balance) {
+        // Convert from wei (assuming 6 decimals for USDC)
+        const balanceInUsdc = (parseInt(data.balance) / 1000000).toFixed(2);
+        console.log(`USDC Balance: ${balanceInUsdc}`);
+        setUsdcBalance(balanceInUsdc);
+      }
+    } catch (error) {
+      console.error('Failed to fetch USDC balance:', error);
+    }
+  };
+  
   // Effect to fetch existing active records when wallet connects
   useEffect(() => {
     if (isConnected && address) {
+      // Fetch USDC balance when wallet connects
+      fetchUsdcBalance(address);
       const fetchExistingRecords = async () => {
         try {
           setIsLoadingRecord(true);
@@ -777,8 +830,25 @@ function AppContent() {
   // Removed duplicate handleAddFrame function
 
   const increaseAmount = () => {
+    // If would exceed balance, show error message
+    if (wouldExceedBalance) {
+      showSeasonsUsdcErrorMessage();
+      return;
+    }
     setAmount(prev => prev + 1);
   };
+  
+  // Check if increasing amount would exceed USDC balance
+  const wouldExceedBalance = (amount + 1) > parseFloat(usdcBalance);
+  
+  // CSS classes for disabled button
+  const disabledButtonClass = "opacity-30 cursor-not-allowed";
+  
+  // Check if campaign donation increase would exceed balance
+  const wouldCampaignDonationExceedBalance = (campaignDonation + 1) > parseFloat(usdcBalance);
+  
+  // Check if campaign goal increase would exceed balance
+  const wouldCampaignGoalExceedBalance = (campaignGoal + 1) > parseFloat(usdcBalance);
 
   const decreaseAmount = () => {
     setAmount(prev => prev > 1 ? prev - 1 : 1);
@@ -1230,13 +1300,22 @@ function AppContent() {
                   </div>
                   <button 
                     onClick={increaseAmount}
-                    className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                    className={`w-10 h-10 rounded-full flex items-center justify-center bg-[var(--app-gray)] ${wouldExceedBalance ? disabledButtonClass : 'hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]'}`}
                   >
                     <span className="text-xl font-bold">+</span>
                   </button>
                 </div>
-                <div className="text-center text-xs text-[var(--app-foreground-muted)] mt-1">
-                  goal amount
+                <div className="relative">
+                  <div className="text-center text-xs text-[var(--app-foreground-muted)] mt-1">
+                    goal amount
+                  </div>
+                  {/* Error message that fades after 1 second (positioned absolutely) */}
+                  <div 
+                    className={`absolute w-full text-center text-red-500 text-xs mt-1 transition-opacity duration-700 ${showSeasonsUsdcError ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                    style={{height: '0px'}}
+                  >
+                    Not enough USDC on Base
+                  </div>
                 </div>
               </>
             )}
@@ -1438,30 +1517,45 @@ function AppContent() {
                         {/* Donation Amount */}
                         <div className="mb-10">
                           <label className="block text-[var(--app-foreground)] text-lg font-medium mb-5">Your donation:</label>
-                          <div className="flex items-center justify-center gap-4">
-                            <button 
-                              onClick={() => setCampaignDonation(prev => prev > 1 ? prev - 1 : 1)}
-                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
-                            >
-                              <span className="text-xl font-bold">-</span>
-                            </button>
-                            <div className="text-2xl font-bold min-w-[80px] text-center">
-                              ${campaignDonation}
+                          <div className="relative">
+                            <div className="flex items-center justify-center gap-4">
+                              <button 
+                                onClick={() => setCampaignDonation(prev => prev > 1 ? prev - 1 : 1)}
+                                className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                              >
+                                <span className="text-xl font-bold">-</span>
+                              </button>
+                              <div className="text-2xl font-bold min-w-[80px] text-center">
+                                ${campaignDonation}
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  // If would exceed balance, show error message
+                                  if (wouldCampaignDonationExceedBalance) {
+                                    showUsdcErrorMessage();
+                                    return;
+                                  }
+                                  
+                                  const newDonation = campaignDonation + 1;
+                                  setCampaignDonation(newDonation);
+                                  
+                                  // Ensure campaign goal is never less than donation amount
+                                  if (newDonation > campaignGoal) {
+                                    setCampaignGoal(newDonation);
+                                  }
+                                }}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center bg-[var(--app-gray)] ${wouldCampaignDonationExceedBalance ? disabledButtonClass : 'hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]'}`}
+                              >
+                                <span className="text-xl font-bold">+</span>
+                              </button>
                             </div>
-                            <button 
-                              onClick={() => {
-                                const newDonation = campaignDonation + 1;
-                                setCampaignDonation(newDonation);
-                                
-                                // Ensure campaign goal is never less than donation amount
-                                if (newDonation > campaignGoal) {
-                                  setCampaignGoal(newDonation);
-                                }
-                              }}
-                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                            {/* Error message that fades after 1.5 seconds (positioned absolutely so it doesn't affect layout) */}
+                            <div 
+                              className={`absolute w-full text-center text-red-500 text-xs mt-1 transition-opacity duration-700 ${showNotEnoughUsdcError ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                              style={{height: '0px'}}
                             >
-                              <span className="text-xl font-bold">+</span>
-                            </button>
+                              Not enough USDC on Base
+                            </div>
                           </div>
                         </div>
                         
@@ -1479,14 +1573,30 @@ function AppContent() {
                               ${campaignGoal}
                             </div>
                             <button 
-                              onClick={() => setCampaignGoal(prev => prev + 1)}
-                              className="w-10 h-10 rounded-full bg-[var(--app-gray)] flex items-center justify-center hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]"
+                              onClick={() => {
+                                // If would exceed balance, show error message
+                                if (wouldCampaignGoalExceedBalance) {
+                                  showGoalUsdcErrorMessage();
+                                  return;
+                                }
+                                setCampaignGoal(prev => prev + 1);
+                              }}
+                              className={`w-10 h-10 rounded-full flex items-center justify-center bg-[var(--app-gray)] ${wouldCampaignGoalExceedBalance ? disabledButtonClass : 'hover:bg-[var(--app-gray-hover)] active:bg-[var(--app-gray-active)]'}`}
                             >
                               <span className="text-xl font-bold">+</span>
                             </button>
                           </div>
-                          <div className="text-center text-[10px] text-[var(--app-foreground-muted)] mt-1">
-                            This USDC approval is only a passthrough. When your cast receives a tip, an equivalent donation will be made from this balance
+                          <div className="relative">
+                            <div className="text-center text-[10px] text-[var(--app-foreground-muted)] mt-1">
+                              This USDC approval is only a passthrough. When your cast receives a tip, an equivalent donation will be made from this balance
+                            </div>
+                            {/* Error message that fades after 1 second (positioned absolutely) */}
+                            <div 
+                              className={`absolute w-full text-center text-red-500 text-xs mt-1 transition-opacity duration-700 ${showGoalUsdcError ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                              style={{height: '0px'}}
+                            >
+                              Not enough USDC on Base
+                            </div>
                           </div>
                         </div>
                         
